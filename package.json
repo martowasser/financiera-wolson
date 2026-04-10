@@ -1,20 +1,26 @@
 {
   "name": "financiera-poc",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "dev:api": "npm run dev -w apps/api",
-    "dev:web": "npm run dev -w apps/web",
-    "build:api": "npm run build -w apps/api",
-    "build:web": "npm run build -w apps/web",
-    "test": "npm run test -w apps/api",
-    "db:migrate": "npm run db:migrate -w apps/api",
-    "db:seed": "npm run db:seed -w apps/api",
-    "db:generate": "npm run db:generate -w apps/api"
+    "dev": "turbo dev",
+    "dev:api": "turbo dev --filter=@financiero/api",
+    "dev:web": "turbo dev --filter=@financiero/web",
+    "build": "turbo build",
+    "build:api": "turbo build --filter=@financiero/api",
+    "build:web": "turbo build --filter=@financiero/web",
+    "lint": "turbo lint",
+    "type-check": "turbo type-check",
+    "test": "pnpm --filter @financiero/api test",
+    "db:migrate": "pnpm --filter @financiero/api db:migrate",
+    "db:seed": "pnpm --filter @financiero/api db:seed",
+    "db:generate": "pnpm --filter @financiero/api db:generate",
+    "db:reset": "pnpm --filter @financiero/api db:reset",
+    "db:studio": "pnpm --filter @financiero/api exec prisma studio"
   },
+  "devDependencies": {
+    "turbo": "^2"
+  },
+  "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20.0.0"
   }

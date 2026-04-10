@@ -126,28 +126,34 @@
 docker compose up -d
 
 # 2. Instalar dependencias
-npm install
+pnpm install
 
 # 3. Aplicar migraciones
-npm run db:migrate -w apps/api
+pnpm db:migrate
 
 # 4. Seed con datos de prueba
-npm run db:seed -w apps/api
+pnpm db:seed
 # Usuarios: admin@financiera.com, mariana@financiera.com, alberto@financiera.com (password: admin123)
 
-# 5. Iniciar servidor API
-npm run dev:api
-# → http://localhost:3001
+# 5. Iniciar todos los dev servers (API + Web + shared watch)
+pnpm dev
+# API → http://localhost:3001
+# Web → http://localhost:3000
 
-# 6. Iniciar frontend (en otra terminal)
-npm run dev:web
-# → http://localhost:3000
+# 6. O iniciar por separado
+pnpm dev:api   # Solo API
+pnpm dev:web   # Solo frontend
 
 # 7. Correr tests del backend
-DATABASE_URL="postgresql://financiero:financiero_test@localhost:5435/financiero_test?schema=public" npm run test -w apps/api
+DATABASE_URL="postgresql://financiero:financiero_test@localhost:5435/financiero_test?schema=public" pnpm test
 
-# 8. Build del frontend
-npm run build:web
+# 8. Build de todo
+pnpm build
+
+# 9. Otros comandos útiles
+pnpm db:generate   # Regenerar Prisma client
+pnpm db:reset      # Reset BD completo
+pnpm db:studio     # Prisma Studio (GUI)
 ```
 
 ### Decisiones tomadas durante la construcción (Fase 2)
