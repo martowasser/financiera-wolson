@@ -3,7 +3,7 @@
 ## Estado actual
 - [x] Fase 1 — Backend completo (completada 2026-04-09)
 - [x] Fase 2 — Frontend OPERATOR (completada 2026-04-10)
-- [ ] Fase 3 — Frontend VIEWER
+- [x] Fase 3 — Frontend VIEWER (completada 2026-04-10)
 
 ## Fase 1 — Notas del handoff
 
@@ -177,3 +177,72 @@ npm run build:web
 5. **Settlement approve requiere rol ADMIN.** Si se quiere que OPERATOR pueda aprobar, hay que cambiar el middleware en `apps/api/src/modules/settlement/routes.ts`.
 
 6. **shadcn v4 con @base-ui/react:** No usar `asChild` en Button/Popover/Dialog. Usar `render` prop. Select y Tabs `onValueChange` devuelven `string | null`.
+
+## Fase 3 — Notas del handoff
+
+### Qué se construyó
+
+**Dashboard VIEWER (solo lectura para Alberto):**
+
+| Pantalla | Ruta | Funcionalidad |
+|----------|------|---------------|
+| **Dashboard principal** | `/viewer/dashboard` | KPIs: posición consolidada por moneda (ARS/USD), saldos ponderados por ownership de Alberto en cada entidad (DA S.A. 50%, MR Inversiones 40%, La Financiera 100%), resumen de alquileres (al día/pendientes/sin factura). Click en entidad → drill-down |
+| **Ingresos y Gastos** | `/viewer/income-expenses` | Navegación entre períodos con flechas. Flujo de fondos por moneda (ingresos/egresos/neto). Resumen por tipo de transacción. Lista detallada de transacciones del período |
+| **Estado de Alquileres** | `/viewer/leases` | Tarjetas de resumen (al día/pendientes/sin factura). Detalle por propiedad: nombre, dirección, inquilino, monto base, estado de cobro del mes, tipo de gestión (directa/tercero) |
+| **Detalle por Entidad** | `/viewer/entities` + `/viewer/entities/[id]` | Lista de todas las entidades con tipo y CUIT. Drill-down: socios con porcentajes, cuentas agrupadas por moneda con débitos/créditos/saldo. Click en socio → navegar a detalle del socio |
+
+**Modificaciones a código existente:**
+
+| Archivo | Cambio |
+|---------|--------|
+| `lib/auth-context.tsx` | `login()` ahora retorna `User` para que el login page pueda redirigir según rol |
+| `(auth)/login/page.tsx` | Post-login redirige a `/viewer/dashboard` si rol es VIEWER, `/dashboard` si es OPERATOR/ADMIN |
+| `(operator)/layout.tsx` | Redirige a `/viewer/dashboard` si un VIEWER intenta acceder a pantallas de operador |
+
+**Nuevos archivos:**
+
+| Archivo | Descripción |
+|---------|-------------|
+| `components/viewer-sidebar.tsx` | Sidebar de navegación para VIEWER con 4 items (Dashboard, Ingresos y Gastos, Alquileres, Entidades) |
+| `(viewer)/layout.tsx` | Layout protegido: valida que el usuario esté autenticado y tenga rol VIEWER |
+| `(viewer)/viewer/dashboard/page.tsx` | Dashboard principal |
+| `(viewer)/viewer/income-expenses/page.tsx` | Ingresos y gastos por período |
+| `(viewer)/viewer/leases/page.tsx` | Estado de alquileres |
+| `(viewer)/viewer/entities/page.tsx` | Lista de entidades |
+| `(viewer)/viewer/entities/[id]/page.tsx` | Detalle por entidad |
+
+**Endpoints del API utilizados:**
+- `GET /api/entities` — Lista de entidades
+- `GET /api/entities/:id` — Detalle de entidad
+- `GET /api/periods` — Lista de períodos
+- `GET /api/ownerships/entity/:entityId` — Socios de una entidad
+- `GET /api/reports/owner/:ownerId/weighted-balances` — Saldos ponderados por ownership
+- `GET /api/reports/entity/:entityId/balances` — Cuentas con saldos por entidad
+- `GET /api/reports/period/:periodId/movements` — Transacciones del período
+- `GET /api/reports/period/:periodId/cash-flow` — Flujo de fondos
+- `GET /api/reports/leases/status` — Estado de alquileres
+
+**Componentes reutilizados de Fase 2:**
+- `DataTable`, `PageHeader`, `Combobox`
+- `lib/api.ts`, `lib/auth-context.tsx`, `lib/hooks.ts`, `lib/format.ts`
+- shadcn/ui: Card, Badge, Button, Skeleton, Separator, ScrollArea, Table, Tooltip
+
+### Decisiones tomadas durante la construcción (Fase 3)
+
+1. **Mapping User → Entity para weighted balances:** No hay relación directa entre User y Entity en el schema. Se resuelve buscando la entidad de tipo PERSON cuyo nombre coincida con el del usuario logueado. Funciona para el POC. Para producción, considerar agregar un campo `entityId` al modelo User.
+
+2. **Route group `(viewer)` con segmento `viewer/`:** Next.js route groups no crean segmentos de URL, lo que genera conflictos con rutas del operador (`/dashboard`, `/entities`, `/leases`). Se resolvió agregando un directorio `viewer/` dentro del route group `(viewer)`, resultando en URLs como `/viewer/dashboard`.
+
+3. **Guard bidireccional de roles:** El layout del operador ahora redirige VIEWERs a `/viewer/dashboard`, y el layout del viewer redirige no-VIEWERs a `/dashboard`. Esto garantiza que Alberto solo vea las pantallas de viewer y los operadores no puedan acceder al viewer.
+
+4. **Sin gráficos en el POC:** Las KPI cards y tablas cubren la necesidad de visualización. Para post-POC se puede agregar una librería de charts (recharts) para el gráfico de flujo de fondos mencionado en el plan.
+
+### Proyecto completo — Las 3 fases están terminadas
+
+El sistema está funcional con:
+- **Backend:** 12 módulos, 20 tests, todos los endpoints de reporting
+- **Frontend OPERATOR:** 11 pantallas para Mariana (carga de transacciones, cierre, alquileres, conciliación, etc.)
+- **Frontend VIEWER:** 4 pantallas para Alberto (dashboard, ingresos/gastos, alquileres, entidades)
+- **Auth:** Login con redirección por rol, guards en layouts, 3 roles (ADMIN, OPERATOR, VIEWER)
+
+Usuarios de prueba: `admin@financiera.com`, `mariana@financiera.com`, `alberto@financiera.com` (password: `admin123`)

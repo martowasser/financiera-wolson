@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
-import { AppSidebar } from '@/components/app-sidebar';
+import { ViewerSidebar } from '@/components/viewer-sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -15,8 +15,8 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
     if (!isLoading && !user) {
       router.push('/login');
     }
-    if (!isLoading && user && user.role === 'VIEWER') {
-      router.push('/viewer/dashboard');
+    if (!isLoading && user && user.role !== 'VIEWER') {
+      router.push('/dashboard');
     }
   }, [user, isLoading, router]);
 
@@ -32,11 +32,11 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user || user.role === 'VIEWER') return null;
+  if (!user || user.role !== 'VIEWER') return null;
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <AppSidebar />
+      <ViewerSidebar />
       <main className="flex-1 overflow-auto">
         <div className="container max-w-6xl mx-auto px-6 py-6 space-y-6">
           {children}
@@ -46,7 +46,7 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function OperatorLayout({ children }: { children: React.ReactNode }) {
+export default function ViewerLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <TooltipProvider>

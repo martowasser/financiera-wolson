@@ -21,8 +21,8 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      router.push('/dashboard');
+      const user = await login(email, password);
+      router.push(user.role === 'VIEWER' ? '/viewer/dashboard' : '/dashboard');
     } catch {
       setError('Email o contraseña incorrectos');
     } finally {
