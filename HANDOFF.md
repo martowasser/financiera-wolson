@@ -2,7 +2,7 @@
 
 ## Estado actual
 - [x] Fase 1 — Backend completo (completada 2026-04-09)
-- [ ] Fase 2 — Frontend OPERATOR
+- [x] Fase 2 — Frontend OPERATOR (completada 2026-04-10)
 - [ ] Fase 3 — Frontend VIEWER
 
 ## Fase 1 — Notas del handoff
@@ -55,6 +55,70 @@
 - Distribución (largest remainder): 7 tests incluyendo edge cases
 - Flujo de cobro de alquiler: crear invoice con retenciones → cobrar → verificar transaction + balances
 
+### Decisiones tomadas durante la construcción (Fase 1)
+
+1. **Puertos Docker:** Se usan puertos 5434 (dev) y 5435 (test) en vez de 5432 para evitar conflictos con PostgreSQL local existente.
+
+2. **RefreshToken como modelo:** Se agregó el modelo `RefreshToken` al schema de Prisma (no estaba en el plan original) para implementar la rotación de refresh tokens descrita en la sección 13.5.
+
+3. **Auth middleware doble función:** `authenticate` valida el token, `requireRole(...roles)` valida token + rol. Los endpoints usan `requireRole` como preHandler para rutas protegidas.
+
+4. **Invoice.collect no usa ledger service directamente:** La función `collect` en invoice service crea la transacción directamente con Prisma (incluyendo actualización de balances) en vez de llamar al ledger service, para mantener todo dentro de una sola transacción de BD. Esto duplica algo de lógica pero garantiza atomicidad del flujo completo (crear txn + actualizar invoice status).
+
+5. **BigInt serialization:** Se agregó un hook `preSerialization` en Fastify que convierte BigInt a Number en las respuestas JSON. Esto fue anticipado en la Fase 1 como posible necesidad para la Fase 2.
+
+6. **Prisma schema folder:** Se removió `previewFeatures = ["prismaSchemaFolder"]` ya que está deprecado en Prisma 6.19 — la funcionalidad de schema modular ya está disponible sin preview feature.
+
+## Fase 2 — Notas del handoff
+
+### Qué se construyó
+
+**Setup:**
+- Next.js 16.2.3 con App Router en `apps/web/`
+- shadcn/ui v4 (basado en `@base-ui/react`) como base de componentes (25 componentes instalados)
+- Tailwind CSS 4 con tema shadcn
+- Conexión al API en `http://localhost:3001/api`
+- Auth: access token en memoria JS + refresh token en cookie (SameSite=Strict, 7 días)
+- Auto-refresh de sesión al cargar la app si hay refresh token en cookie
+- API client con retry automático en 401 (refresh + retry)
+
+**Pantallas implementadas (11):**
+
+| Pantalla | Ruta | Funcionalidad |
+|----------|------|---------------|
+| **Login** | `/login` | Email + password, redirect a dashboard |
+| **Dashboard operativo** | `/dashboard` | Saldos efectivo ARS/USD, transacciones del día, alquileres pendientes, accesos rápidos |
+| **Transacciones** | `/transactions` | Carga keyboard-first (Tab, Ctrl+Enter para guardar), autocomplete fuzzy cuentas, validación balance en tiempo real, medio de pago, filtros, detalle, botón Revertir |
+| **Cierre de período** | `/period` | Resumen saldos, navegación entre días (anteriores = read-only), diálogo de confirmación con notas |
+| **Entidades** | `/entities` | CRUD + detalle con Ownership: agregar socios, porcentajes, validación suma 100%, historial |
+| **Cuentas** | `/accounts` | CRUD, vista lista con filtros, vista jerarquía (árbol), saldos en tiempo real |
+| **Propiedades** | `/properties` | CRUD con datos físicos, tipo (departamento/comercial/oficina/etc), entidad propietaria |
+| **Contratos** | `/leases` | CRUD de Lease + detalle con historial de precios (LeasePrice). Soporte DIRECT y THIRD_PARTY |
+| **Cobro de alquileres** | `/invoices` | Crear Invoice (contrato + base + IVA + retenciones flexibles) → registrar cobro con medio de pago → transacción automática |
+| **Liquidaciones** | `/settlements` | Seleccionar sociedad + período + moneda → calcular distribución → ver preview → aprobar |
+| **Conciliación bancaria** | `/reconciliation` | Vista split-screen: items del banco (izquierda) vs transacciones del sistema (derecha). Agregar items, match manual, globalización (agrupar N items), color coding (verde=conciliado, amarillo=agrupado), barra de progreso, completar |
+
+**Componentes reutilizables:**
+- `Combobox` — Autocomplete fuzzy para entidades, cuentas, propiedades (popover + command con búsqueda)
+- `DataTable` — Tabla genérica con tipado, loading skeletons, empty states, click en fila
+- `PageHeader` — Header de página con título, descripción y acciones
+- `AppSidebar` — Navegación lateral con highlight de ruta activa
+
+**UX transversal:**
+- Keyboard-first: Tab entre campos, Enter/Ctrl+Enter para guardar
+- Autocomplete fuzzy en todos los selectores de entidad/cuenta/propiedad
+- Validación en tiempo real del balance de asientos (Débitos = Créditos)
+- Navegación rápida entre módulos via sidebar
+- Toasts para feedback (éxito/error) con sonner
+- Loading skeletons mientras cargan datos
+- Responsive (uso principal desktop)
+
+**Infraestructura frontend:**
+- `lib/api.ts` — API client con manejo de tokens, auto-refresh, error handling
+- `lib/auth-context.tsx` — React Context para auth (login/logout/user state)
+- `lib/hooks.ts` — `useQuery` y `useMutation` hooks para data fetching
+- `lib/format.ts` — Formateo de montos (centavos → pesos con separador de miles), fechas
+
 ### Cómo correr el proyecto
 
 ```bash
@@ -66,45 +130,50 @@ npm install
 
 # 3. Aplicar migraciones
 npm run db:migrate -w apps/api
-# (o: cd apps/api && npx prisma migrate dev)
 
 # 4. Seed con datos de prueba
 npm run db:seed -w apps/api
 # Usuarios: admin@financiera.com, mariana@financiera.com, alberto@financiera.com (password: admin123)
 
-# 5. Iniciar servidor de desarrollo
+# 5. Iniciar servidor API
 npm run dev:api
 # → http://localhost:3001
 
-# 6. Correr tests
+# 6. Iniciar frontend (en otra terminal)
+npm run dev:web
+# → http://localhost:3000
+
+# 7. Correr tests del backend
 DATABASE_URL="postgresql://financiero:financiero_test@localhost:5435/financiero_test?schema=public" npm run test -w apps/api
 
-# 7. Build
-npm run build:api
+# 8. Build del frontend
+npm run build:web
 ```
 
-### Decisiones tomadas durante la construcción
+### Decisiones tomadas durante la construcción (Fase 2)
 
-1. **Puertos Docker:** Se usan puertos 5434 (dev) y 5435 (test) en vez de 5432 para evitar conflictos con PostgreSQL local existente.
+1. **Next.js 16 + shadcn/ui v4:** La versión actual de shadcn usa `@base-ui/react` en lugar de Radix. Cambios clave: no hay `asChild` prop (usar `render` prop en su lugar), `Select.onValueChange` recibe `string | null`, y `Tabs.onValueChange` recibe `string | null`.
 
-2. **RefreshToken como modelo:** Se agregó el modelo `RefreshToken` al schema de Prisma (no estaba en el plan original) para implementar la rotación de refresh tokens descrita en la sección 13.5.
+2. **Auth sin httpOnly cookie del servidor:** El backend devuelve el refresh token como string en el body de login. El frontend lo almacena en una cookie SameSite=Strict desde JavaScript. Esto no es httpOnly (el JS puede leerlo), pero es aceptable para el POC. Para producción, considerar un endpoint que setee la cookie httpOnly desde el backend.
 
-3. **Auth middleware doble función:** `authenticate` valida el token, `requireRole(...roles)` valida token + rol. Los endpoints usan `requireRole` como preHandler para rutas protegidas.
+3. **Hooks propios vs TanStack Query:** Se usaron hooks `useQuery`/`useMutation` propios en vez de TanStack Query. Para una app de 3-4 usuarios con CRUD simple, la complejidad de una librería de caching no se justifica.
 
-4. **Invoice.collect no usa ledger service directamente:** La función `collect` en invoice service crea la transacción directamente con Prisma (incluyendo actualización de balances) en vez de llamar al ledger service, para mantener todo dentro de una sola transacción de BD. Esto duplica algo de lógica pero garantiza atomicidad del flujo completo (crear txn + actualizar invoice status).
+4. **BigInt → Number en API:** Se agregó un hook `preSerialization` en Fastify (modificación en `apps/api/src/index.ts`) que convierte todos los BigInt a Number en las respuestas JSON. Esto simplifica el manejo en el frontend. Para valores > Number.MAX_SAFE_INTEGER (>90 trillones de centavos), habría que usar strings, pero los montos de esta financiera nunca llegarán a eso.
 
-5. **BigInt serialization:** Fastify serializa BigInt como número en JSON por defecto. Si hay issues con valores grandes en el frontend, agregar un serializer custom en Fase 2.
+5. **Formateo de montos:** `lib/format.ts` convierte centavos a pesos con `Intl.NumberFormat('es-AR')` y agrega prefijo `$` o `US$` según la moneda.
 
-6. **Prisma schema folder:** Se removió `previewFeatures = ["prismaSchemaFolder"]` ya que está deprecado en Prisma 6.19 — la funcionalidad de schema modular ya está disponible sin preview feature.
+6. **No se usa middleware/proxy de Next.js:** La protección de rutas se hace client-side en el layout del grupo `(operator)` — si no hay usuario, redirige a `/login`. Esto es aceptable porque el API ya valida auth en todos los endpoints.
 
 ### Notas para el próximo Claude
 
-1. **La migración tiene el trigger SQL:** El archivo `prisma/schema/migrations/20260410003312_init/migration.sql` incluye al final el trigger `validate_double_entry`. Si se agrega una nueva migración, NO hay que moverlo — queda en la migración inicial.
+1. **Las pantallas son funcionales contra el API real.** Se verificó login, listado de entidades, cuentas, período del día. Los datos del seed se muestran correctamente.
 
-2. **Tests requieren variable de entorno:** Los tests usan `DATABASE_URL` apuntando al contenedor test (puerto 5435). El vitest.config.ts tiene un setup file pero los tests importan Prisma directamente con la URL hardcoded como fallback.
+2. **El build compila sin errores.** `npm run build:web` genera las 15 rutas estáticas sin problemas.
 
-3. **Endpoints de reporting devuelven BigInt como string:** Para evitar pérdida de precisión en JSON, los montos en reporting se serializan como strings. El frontend deberá convertirlos.
+3. **Fase 3 (VIEWER) debería reutilizar componentes.** `DataTable`, `PageHeader`, `Combobox`, `lib/format.ts`, `lib/api.ts` y `lib/hooks.ts` están listos para usar.
 
-4. **Conciliación es manual:** El modelo soporta `importedFrom` y `externalRef` para importación futura, pero en esta fase todo es manual.
+4. **El dashboard del VIEWER ya tiene endpoints de reporting.** `/api/reports/owner/:ownerId/weighted-balances`, `/api/reports/leases/status`, `/api/reports/period/:periodId/cash-flow` están implementados en el backend.
 
-5. **Settlement distributions es Json:** Como dice el plan, `OwnerSettlement.distributions` es un campo Json con array de `{ ownerId, ownerName, percentage, amount }`. El amount se guarda como string para preservar precisión.
+5. **Settlement approve requiere rol ADMIN.** Si se quiere que OPERATOR pueda aprobar, hay que cambiar el middleware en `apps/api/src/modules/settlement/routes.ts`.
+
+6. **shadcn v4 con @base-ui/react:** No usar `asChild` en Button/Popover/Dialog. Usar `render` prop. Select y Tabs `onValueChange` devuelven `string | null`.

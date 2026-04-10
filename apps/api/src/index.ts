@@ -17,7 +17,20 @@ import settlementRoutes from './modules/settlement/routes.js';
 import reconciliationRoutes from './modules/reconciliation/routes.js';
 import reportRoutes from './modules/reporting/routes.js';
 
-const server = Fastify({ logger: true });
+const server = Fastify({
+  logger: true,
+  // Serialize BigInt as number in JSON responses
+  serializerOpts: {
+    ajv: { allowUnionTypes: true },
+  },
+});
+
+// Handle BigInt serialization globally
+server.addHook('preSerialization', async (_request, _reply, payload) => {
+  return JSON.parse(JSON.stringify(payload, (_key, value) =>
+    typeof value === 'bigint' ? Number(value) : value
+  ));
+});
 
 await server.register(cors, {
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
