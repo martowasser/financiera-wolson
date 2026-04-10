@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { useAuth } from '@/lib/auth-context';
 import { ViewerSidebar } from '@/components/viewer-sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -48,10 +48,8 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
 
 export default function ViewerLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <TooltipProvider>
-        <ProtectedContent>{children}</ProtectedContent>
-      </TooltipProvider>
-    </AuthProvider>
+    <TooltipProvider>
+      <ProtectedContent>{children}</ProtectedContent>
+    </TooltipProvider>
   );
 }
