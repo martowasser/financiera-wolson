@@ -1,0 +1,20 @@
+model Period {
+  id              String       @id @default(cuid())
+  date            DateTime     @unique @db.Date
+  status          PeriodStatus @default(OPEN)
+  closedAt        DateTime?
+  closedById      String?
+  closingNotes    String?
+  closingBalances Json?
+
+  closedBy     User?         @relation("PeriodClosedBy", fields: [closedById], references: [id])
+  transactions Transaction[]
+
+  @@index([date])
+  @@index([status])
+}
+
+enum PeriodStatus {
+  OPEN
+  CLOSED
+}

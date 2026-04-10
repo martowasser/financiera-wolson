@@ -1,0 +1,30 @@
+model OwnerSettlement {
+  id            String           @id @default(cuid())
+  entityId      String
+  periodFrom    DateTime         @db.Date
+  periodTo      DateTime         @db.Date
+  currency      Currency
+  grossIncome   BigInt
+  totalExpenses BigInt
+  netIncome     BigInt
+  distributions Json
+  status        SettlementStatus @default(DRAFT)
+  createdById   String
+  approvedAt    DateTime?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  entity    Entity @relation(fields: [entityId], references: [id])
+  createdBy User   @relation("SettlementCreatedBy", fields: [createdById], references: [id])
+
+  @@index([entityId])
+  @@index([status])
+  @@index([periodFrom, periodTo])
+}
+
+enum SettlementStatus {
+  DRAFT
+  APPROVED
+  DISTRIBUTED
+}

@@ -1,0 +1,53 @@
+model Transaction {
+  id             String            @id @default(cuid())
+  periodId       String
+  code           String            @unique
+  description    String
+  type           TransactionType
+  status         TransactionStatus @default(CONFIRMED)
+  reversesId     String?           @unique
+  paymentMethod  PaymentMethod?
+  checkNumber    String?
+  bankReference  String?
+  invoiceId      String?
+  notes          String?
+  idempotencyKey String?           @unique
+  createdById    String
+  reversedById   String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  period       Period       @relation(fields: [periodId], references: [id])
+  reverses     Transaction? @relation("TransactionReversal", fields: [reversesId], references: [id])
+  reversedByTx Transaction? @relation("TransactionReversal")
+  createdBy    User         @relation("TransactionCreatedBy", fields: [createdById], references: [id])
+  reversedBy   User?        @relation("TransactionReversedBy", fields: [reversedById], references: [id])
+  invoice      Invoice?     @relation(fields: [invoiceId], references: [id])
+  entries      Entry[]
+
+  @@index([periodId])
+  @@index([type])
+  @@index([status])
+  @@index([invoiceId])
+  @@index([createdAt])
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  BANK_FEE
+  REVERSAL
+  ADJUSTMENT
+}
+
+enum TransactionStatus {
+  CONFIRMED
+  REVERSED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHECK
+}

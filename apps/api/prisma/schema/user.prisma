@@ -1,0 +1,37 @@
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  String
+  name      String
+  role      UserRole
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  createdTransactions  Transaction[] @relation("TransactionCreatedBy")
+  reversedTransactions Transaction[] @relation("TransactionReversedBy")
+  closedPeriods        Period[]      @relation("PeriodClosedBy")
+  settlements          OwnerSettlement[] @relation("SettlementCreatedBy")
+  auditLogs            AuditLog[]
+  refreshTokens        RefreshToken[]
+}
+
+enum UserRole {
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}

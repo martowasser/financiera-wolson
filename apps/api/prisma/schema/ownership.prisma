@@ -1,0 +1,17 @@
+model Ownership {
+  id         String    @id @default(cuid())
+  entityId   String
+  ownerId    String
+  percentage Int
+  validFrom  DateTime  @default(now())
+  validUntil DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  entity Entity @relation("OwnedEntity", fields: [entityId], references: [id])
+  owner  Entity @relation("OwnerEntity", fields: [ownerId], references: [id])
+
+  @@index([entityId])
+  @@index([ownerId])
+  @@index([entityId, validUntil])
+}

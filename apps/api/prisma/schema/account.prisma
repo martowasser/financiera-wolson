@@ -1,0 +1,40 @@
+model Account {
+  id             String      @id @default(cuid())
+  entityId       String
+  name           String
+  path           String      @unique
+  type           AccountType
+  currency       Currency
+  normalBalance  EntryType
+  bankName       String?
+  bankAccountNum String?
+  debitsPosted   BigInt      @default(0)
+  creditsPosted  BigInt      @default(0)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+
+  entity          Entity                @relation(fields: [entityId], references: [id])
+  entries         Entry[]
+  reconciliations BankReconciliation[]
+
+  @@index([entityId])
+  @@index([type, currency])
+  @@index([path])
+}
+
+enum AccountType {
+  CASH
+  BANK
+  RECEIVABLE
+  PAYABLE
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum Currency {
+  ARS
+  USD
+}

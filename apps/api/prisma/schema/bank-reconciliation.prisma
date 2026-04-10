@@ -1,0 +1,46 @@
+model BankReconciliation {
+  id            String               @id @default(cuid())
+  accountId     String
+  date          DateTime             @db.Date
+  status        ReconciliationStatus @default(IN_PROGRESS)
+  bankBalance   BigInt
+  systemBalance BigInt?
+  difference    BigInt?
+  notes         String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  account Account                    @relation(fields: [accountId], references: [id])
+  items   BankReconciliationItem[]
+
+  @@index([accountId, date])
+  @@index([status])
+}
+
+model BankReconciliationItem {
+  id               String   @id @default(cuid())
+  reconciliationId String
+  description      String
+  bankAmount       BigInt
+  systemAmount     BigInt?
+  isReconciled     Boolean  @default(false)
+  transactionId    String?
+  groupLabel       String?
+  externalRef      String?
+  importedFrom     String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  reconciliation BankReconciliation @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+
+  @@index([reconciliationId])
+  @@index([transactionId])
+  @@index([groupLabel])
+}
+
+enum ReconciliationStatus {
+  IN_PROGRESS
+  COMPLETED
+  DISCREPANCY
+}

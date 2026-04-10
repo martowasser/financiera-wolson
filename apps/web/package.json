@@ -1,0 +1,9 @@
+{
+  "name": "@financiero/web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Web app - Phase 2'",
+    "build": "echo 'Web app - Phase 2'"
+  }
+}

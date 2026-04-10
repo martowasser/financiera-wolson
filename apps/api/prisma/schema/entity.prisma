@@ -1,0 +1,29 @@
+model Entity {
+  id        String     @id @default(cuid())
+  name      String
+  type      EntityType
+  taxId     String?
+  notes     String?
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+
+  accounts      Account[]
+  ownerships    Ownership[] @relation("OwnedEntity")
+  ownerOf       Ownership[] @relation("OwnerEntity")
+  properties    Property[]
+  leases        Lease[]     @relation("LeaseTenant")
+  managedLeases Lease[]     @relation("LeaseThirdParty")
+  settlements   OwnerSettlement[]
+
+  @@index([type])
+  @@index([name])
+}
+
+enum EntityType {
+  COMPANY
+  PERSON
+  FIRM
+  THIRD_PARTY
+}
