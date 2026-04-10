@@ -6,7 +6,7 @@ import { formatMoney } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   ArrowLeftRight,
@@ -92,15 +92,15 @@ export default function DashboardPage() {
 
       {/* Quick actions */}
       <div className="flex gap-2 flex-wrap">
-        <Button render={<Link href="/transactions?new=1" />}>
+        <Link href="/transactions?new=1" className={buttonVariants()}>
           <Plus className="mr-1 h-4 w-4" /> Nueva Transaccion
-        </Button>
-        <Button variant="outline" render={<Link href="/invoices?new=1" />}>
+        </Link>
+        <Link href="/invoices?new=1" className={buttonVariants({ variant: 'outline' })}>
           <Receipt className="mr-1 h-4 w-4" /> Cobrar Alquiler
-        </Button>
-        <Button variant="outline" render={<Link href="/period" />}>
+        </Link>
+        <Link href="/period" className={buttonVariants({ variant: 'outline' })}>
           <CalendarCheck className="mr-1 h-4 w-4" /> Cierre del Dia
-        </Button>
+        </Link>
       </div>
 
       {/* Balance cards */}
