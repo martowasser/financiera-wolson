@@ -33,10 +33,10 @@ export function ReverseDialog({ transaction, onSuccess, onClose }: Props) {
         method: 'POST',
         body: { reason },
       });
-      toast.success(`Transaccion ${transaction.code} revertida`);
+      toast.success(`Movimiento ${transaction.code} anulado`);
       onSuccess();
     } catch (err: unknown) {
-      toast.error((err as Error).message || 'Error al revertir');
+      toast.error((err as Error).message || 'Error al anular');
     } finally {
       setLoading(false);
     }
@@ -47,14 +47,14 @@ export function ReverseDialog({ transaction, onSuccess, onClose }: Props) {
       <AlertDialogContent>
         <form onSubmit={handleSubmit}>
           <AlertDialogHeader>
-            <AlertDialogTitle>Revertir Transaccion {transaction.code}</AlertDialogTitle>
+            <AlertDialogTitle>Anular Movimiento {transaction.code}</AlertDialogTitle>
             <AlertDialogDescription>
-              Se creara un asiento inverso que anula &ldquo;{transaction.description}&rdquo;.
+              Se creara un movimiento inverso que anula &ldquo;{transaction.description}&rdquo;.
               Esta accion no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4 space-y-2">
-            <Label htmlFor="reason">Motivo de reversion *</Label>
+            <Label htmlFor="reason">Motivo de anulacion *</Label>
             <Input
               id="reason"
               value={reason}
@@ -69,7 +69,7 @@ export function ReverseDialog({ transaction, onSuccess, onClose }: Props) {
               Cancelar
             </Button>
             <Button type="submit" variant="destructive" disabled={loading || !reason}>
-              {loading ? 'Revirtiendo...' : 'Confirmar Reversion'}
+              {loading ? 'Anulando...' : 'Confirmar Anulacion'}
             </Button>
           </AlertDialogFooter>
         </form>

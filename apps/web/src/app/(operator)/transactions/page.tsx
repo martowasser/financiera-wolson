@@ -93,7 +93,7 @@ export default function TransactionsPage() {
           variant="ghost"
           size="sm"
           onClick={(e) => { e.stopPropagation(); setReverseTarget(row); }}
-          title="Revertir"
+          title="Anular"
         >
           <RotateCcw className="h-3 w-3" />
         </Button>
@@ -114,11 +114,11 @@ export default function TransactionsPage() {
   return (
     <>
       <PageHeader
-        title="Transacciones"
-        description={period ? `Periodo: ${new Date(period.date).toLocaleDateString('es-AR')} — ${period.status}` : ''}
+        title="Movimientos"
+        description={period ? `Dia: ${new Date(period.date).toLocaleDateString('es-AR')} — ${period.status}` : ''}
         actions={
           <Button onClick={() => setShowForm(true)} disabled={period?.status === 'CLOSED'}>
-            <Plus className="mr-1 h-4 w-4" /> Nueva Transaccion
+            <Plus className="mr-1 h-4 w-4" /> Nuevo Movimiento
           </Button>
         }
       />
@@ -146,7 +146,7 @@ export default function TransactionsPage() {
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="INCOME">Ingreso</SelectItem>
-            <SelectItem value="EXPENSE">Egreso</SelectItem>
+            <SelectItem value="EXPENSE">Gasto</SelectItem>
             <SelectItem value="TRANSFER">Transferencia</SelectItem>
             <SelectItem value="BANK_FEE">Gasto Bancario</SelectItem>
             <SelectItem value="ADJUSTMENT">Ajuste</SelectItem>
@@ -159,7 +159,7 @@ export default function TransactionsPage() {
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="CONFIRMED">Confirmada</SelectItem>
-            <SelectItem value="REVERSED">Revertida</SelectItem>
+            <SelectItem value="REVERSED">Anulada</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -170,7 +170,7 @@ export default function TransactionsPage() {
         isLoading={isLoading}
         rowKey={(r) => r.id}
         onRowClick={(r) => setSelectedTxn(r.id)}
-        emptyMessage="No hay transacciones en este periodo."
+        emptyMessage="No hay movimientos en este dia."
       />
 
       {reverseTarget && (

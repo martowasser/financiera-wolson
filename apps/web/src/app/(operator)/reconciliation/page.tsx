@@ -330,12 +330,12 @@ function ReconciliationDetail({ id, onBack }: { id: string; onBack: () => void }
         {/* Right: System transactions */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Transacciones del Sistema</CardTitle>
+            <CardTitle className="text-sm">Movimientos del Sistema</CardTitle>
           </CardHeader>
           <CardContent>
             <ScrollArea className="max-h-[500px]">
               {!transactions || transactions.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4">No hay transacciones.</p>
+                <p className="text-sm text-muted-foreground py-4">No hay movimientos.</p>
               ) : (
                 <div className="space-y-1">
                   {transactions.slice(0, 50).map((txn) => (
@@ -511,12 +511,12 @@ function MatchDialog({
               <span className="font-mono ml-2">{formatMoney(item.bankAmount)}</span>
             </div>
             <div className="space-y-1">
-              <Label>Transaccion del Sistema *</Label>
+              <Label>Movimiento del Sistema *</Label>
               <Combobox
                 options={txnOptions}
                 value={selectedTxnId}
                 onChange={setSelectedTxnId}
-                placeholder="Seleccionar transaccion..."
+                placeholder="Seleccionar movimiento..."
                 searchPlaceholder="Buscar por codigo o descripcion..."
               />
             </div>

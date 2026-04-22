@@ -52,7 +52,7 @@ export function TransactionDetail({ id, onBack, onReverse }: Props) {
   }
 
   if (!txn) {
-    return <p className="text-muted-foreground">Transaccion no encontrada.</p>;
+    return <p className="text-muted-foreground">Movimiento no encontrado.</p>;
   }
 
   return (
@@ -68,7 +68,7 @@ export function TransactionDetail({ id, onBack, onReverse }: Props) {
         actions={
           txn.status === 'CONFIRMED' ? (
             <Button variant="destructive" size="sm" onClick={() => onReverse(txn)}>
-              <RotateCcw className="h-4 w-4 mr-1" /> Revertir
+              <RotateCcw className="h-4 w-4 mr-1" /> Anular
             </Button>
           ) : undefined
         }
@@ -118,12 +118,12 @@ export function TransactionDetail({ id, onBack, onReverse }: Props) {
             )}
             {txn.reverses && (
               <div className="pt-2 border-t text-orange-600">
-                Revierte: {txn.reverses.code}
+                Anula: {txn.reverses.code}
               </div>
             )}
             {txn.reversedByTx && (
               <div className="pt-2 border-t text-red-600">
-                Revertida por: {txn.reversedByTx.code}
+                Anulado por: {txn.reversedByTx.code}
               </div>
             )}
           </CardContent>
@@ -131,7 +131,7 @@ export function TransactionDetail({ id, onBack, onReverse }: Props) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Lineas del Asiento</CardTitle>
+            <CardTitle className="text-sm">Lineas del Movimiento</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">

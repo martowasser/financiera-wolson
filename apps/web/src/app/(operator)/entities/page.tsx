@@ -94,17 +94,17 @@ export default function EntitiesPage() {
   return (
     <>
       <PageHeader
-        title="Entidades"
+        title="Sociedades"
         description="Sociedades, personas y terceros"
         actions={
           <Button onClick={() => { setEditing(null); setShowForm(true); }}>
-            <Plus className="mr-1 h-4 w-4" /> Nueva Entidad
+            <Plus className="mr-1 h-4 w-4" /> Nueva Sociedad
           </Button>
         }
       />
 
       <Input
-        placeholder="Buscar entidad..."
+        placeholder="Buscar..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-64"
@@ -116,7 +116,7 @@ export default function EntitiesPage() {
         isLoading={isLoading}
         rowKey={(r) => r.id}
         onRowClick={(r) => setDetailId(r.id)}
-        emptyMessage="No hay entidades."
+        emptyMessage="No hay sociedades."
       />
 
       <EntityFormDialog
@@ -158,13 +158,13 @@ function EntityFormDialog({
           method: 'PUT',
           body: { name, type, taxId: taxId || null, notes: notes || null },
         });
-        toast.success('Entidad actualizada');
+        toast.success('Sociedad actualizada');
       } else {
         await apiFetch('/entities', {
           method: 'POST',
           body: { name, type, taxId: taxId || null, notes: notes || null },
         });
-        toast.success('Entidad creada');
+        toast.success('Sociedad creada');
       }
       onSaved();
     } catch (err: unknown) {
@@ -179,7 +179,7 @@ function EntityFormDialog({
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{isEdit ? 'Editar Entidad' : 'Nueva Entidad'}</DialogTitle>
+            <DialogTitle>{isEdit ? 'Editar Sociedad' : 'Nueva Sociedad'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-1">

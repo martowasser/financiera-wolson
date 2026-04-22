@@ -93,7 +93,7 @@ export default function DashboardPage() {
       {/* Quick actions */}
       <div className="flex gap-2 flex-wrap">
         <Link href="/transactions?new=1" className={buttonVariants()}>
-          <Plus className="mr-1 h-4 w-4" /> Nueva Transaccion
+          <Plus className="mr-1 h-4 w-4" /> Nuevo Movimiento
         </Link>
         <Link href="/invoices?new=1" className={buttonVariants({ variant: 'outline' })}>
           <Receipt className="mr-1 h-4 w-4" /> Cobrar Alquiler
@@ -155,7 +155,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Egresos Hoy</CardTitle>
+            <CardTitle className="text-sm font-medium">Gastos Hoy</CardTitle>
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -176,7 +176,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <ArrowLeftRight className="h-4 w-4" />
-              Transacciones del Dia ({todayTxns.length})
+              Movimientos del Dia ({todayTxns.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -187,7 +187,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : todayTxns.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4">No hay transacciones hoy.</p>
+              <p className="text-sm text-muted-foreground py-4">No hay movimientos hoy.</p>
             ) : (
               <div className="space-y-2">
                 {todayTxns.slice(0, 8).map((txn) => (

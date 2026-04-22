@@ -174,7 +174,7 @@ export default function ViewerDashboardPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b bg-muted/50">
-                          <th className="px-4 py-2 text-left font-medium">Entidad</th>
+                          <th className="px-4 py-2 text-left font-medium">Sociedad</th>
                           <th className="px-4 py-2 text-left font-medium">Cuenta</th>
                           <th className="px-4 py-2 text-right font-medium">%</th>
                           <th className="px-4 py-2 text-right font-medium">Saldo cuenta</th>

@@ -326,12 +326,12 @@ function AccountFormDialog({
           </DialogHeader>
           <div className="space-y-3 py-4">
             <div className="space-y-1">
-              <Label>Entidad *</Label>
+              <Label>Sociedad *</Label>
               <Combobox
                 options={entityOptions}
                 value={entityId}
                 onChange={setEntityId}
-                placeholder="Seleccionar entidad..."
+                placeholder="Seleccionar sociedad..."
               />
             </div>
             <div className="space-y-1">

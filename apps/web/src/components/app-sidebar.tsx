@@ -23,14 +23,14 @@ import { Separator } from '@/components/ui/separator';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/transactions', label: 'Transacciones', icon: ArrowLeftRight },
-  { href: '/period', label: 'Cierre de Periodo', icon: CalendarCheck },
-  { href: '/entities', label: 'Entidades', icon: Building2 },
+  { href: '/transactions', label: 'Movimientos', icon: ArrowLeftRight },
+  { href: '/period', label: 'Cierre de Caja', icon: CalendarCheck },
+  { href: '/entities', label: 'Sociedades', icon: Building2 },
   { href: '/accounts', label: 'Cuentas', icon: Wallet },
   { href: '/properties', label: 'Propiedades', icon: Home },
   { href: '/leases', label: 'Contratos', icon: FileText },
   { href: '/invoices', label: 'Cobro Alquileres', icon: Receipt },
-  { href: '/settlements', label: 'Liquidaciones', icon: Users },
+  { href: '/settlements', label: 'Distribucion a Socios', icon: Users },
   { href: '/reconciliation', label: 'Conciliacion', icon: Scale },
 ];
 

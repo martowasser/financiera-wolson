@@ -19,7 +19,7 @@ const navItems = [
   { href: '/viewer/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/viewer/income-expenses', label: 'Ingresos y Gastos', icon: TrendingUpDown },
   { href: '/viewer/leases', label: 'Alquileres', icon: Home },
-  { href: '/viewer/entities', label: 'Entidades', icon: Building2 },
+  { href: '/viewer/entities', label: 'Sociedades', icon: Building2 },
 ];
 
 export function ViewerSidebar() {

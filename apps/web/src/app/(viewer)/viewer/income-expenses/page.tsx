@@ -157,7 +157,7 @@ export default function IncomeExpensesPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Egresos {cf.currency}
+                    Gastos {cf.currency}
                   </CardTitle>
                   <TrendingDown className="h-4 w-4 text-red-600" />
                 </CardHeader>
@@ -235,7 +235,7 @@ export default function IncomeExpensesPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              Transacciones ({movements.transactionCount})
+              Movimientos ({movements.transactionCount})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -283,7 +283,7 @@ export default function IncomeExpensesPage() {
       ) : selectedPeriod ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
-            No hay transacciones en este periodo
+            No hay movimientos en este dia
           </CardContent>
         </Card>
       ) : null}

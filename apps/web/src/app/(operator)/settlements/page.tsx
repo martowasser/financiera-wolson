@@ -75,7 +75,7 @@ export default function SettlementsPage() {
   }, [refetch]);
 
   const columns: Column<Settlement>[] = [
-    { header: 'Entidad', accessor: (row) => row.entity?.name || '-' },
+    { header: 'Sociedad', accessor: (row) => row.entity?.name || '-' },
     { header: 'Periodo', accessor: (row) => (
       `${formatDate(row.periodFrom)} - ${formatDate(row.periodTo)}`
     ) },
@@ -104,11 +104,11 @@ export default function SettlementsPage() {
   return (
     <>
       <PageHeader
-        title="Liquidacion de Socios"
+        title="Distribucion a Socios"
         description="Calculo y distribucion de resultados"
         actions={
           <Button onClick={() => setShowForm(true)}>
-            <Plus className="mr-1 h-4 w-4" /> Nueva Liquidacion
+            <Plus className="mr-1 h-4 w-4" /> Nueva Distribucion
           </Button>
         }
       />
@@ -131,7 +131,7 @@ export default function SettlementsPage() {
         isLoading={isLoading}
         rowKey={(r) => r.id}
         onRowClick={(r) => setDetailId(r.id)}
-        emptyMessage="No hay liquidaciones."
+        emptyMessage="No hay distribuciones."
       />
 
       {showForm && (
@@ -156,13 +156,13 @@ function SettlementDetail({
 }) {
   const [approving, setApproving] = useState(false);
 
-  if (!settlement) return <p className="text-muted-foreground">Liquidacion no encontrada.</p>;
+  if (!settlement) return <p className="text-muted-foreground">Distribucion no encontrada.</p>;
 
   async function handleApprove() {
     setApproving(true);
     try {
       await apiFetch(`/settlements/${settlement!.id}/approve`, { method: 'POST' });
-      toast.success('Liquidacion aprobada');
+      toast.success('Distribucion aprobada');
       onApproved();
     } catch (err: unknown) {
       toast.error((err as Error).message || 'Error');
@@ -178,7 +178,7 @@ function SettlementDetail({
       </Button>
 
       <PageHeader
-        title={`Liquidacion — ${settlement.entity?.name}`}
+        title={`Distribucion — ${settlement.entity?.name}`}
         description={`${formatDate(settlement.periodFrom)} - ${formatDate(settlement.periodTo)} | ${settlement.currency}`}
         actions={
           settlement.status === 'DRAFT' ? (
@@ -274,7 +274,7 @@ function SettlementFormDialog({
         method: 'POST',
         body: { entityId, periodFrom, periodTo, currency, notes: notes || undefined },
       });
-      toast.success('Liquidacion calculada');
+      toast.success('Distribucion calculada');
       onSaved();
     } catch (err: unknown) {
       toast.error((err as Error).message || 'Error');
@@ -288,11 +288,11 @@ function SettlementFormDialog({
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Nueva Liquidacion</DialogTitle>
+            <DialogTitle>Nueva Distribucion</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-4">
             <div className="space-y-1">
-              <Label>Entidad (Sociedad) *</Label>
+              <Label>Sociedad *</Label>
               <Combobox options={entityOptions} value={entityId} onChange={setEntityId} placeholder="Seleccionar sociedad..." />
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -323,7 +323,7 @@ function SettlementFormDialog({
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={saving || !entityId}>
-              {saving ? 'Calculando...' : 'Calcular Liquidacion'}
+              {saving ? 'Calculando...' : 'Calcular Distribucion'}
             </Button>
           </DialogFooter>
         </form>

@@ -176,15 +176,15 @@ export default function PeriodPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Transacciones totales</span>
+                <span className="text-muted-foreground">Movimientos totales</span>
                 <span className="font-medium">{txnCount}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Confirmadas</span>
+                <span className="text-muted-foreground">Confirmados</span>
                 <span className="font-medium text-green-600">{confirmedTxns}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Revertidas</span>
+                <span className="text-muted-foreground">Anulados</span>
                 <span className="font-medium text-red-600">{reversedTxns}</span>
               </div>
               {current.closedAt && (
@@ -216,7 +216,7 @@ export default function PeriodPage() {
       {isClosed && (
         <div className="flex items-center gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
           <CalendarCheck className="h-4 w-4" />
-          Este periodo esta cerrado. No se pueden agregar mas transacciones.
+          Este dia esta cerrado. No se pueden agregar mas movimientos.
         </div>
       )}
 
@@ -224,11 +224,11 @@ export default function PeriodPage() {
       <AlertDialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cerrar Periodo</AlertDialogTitle>
+            <AlertDialogTitle>Cerrar Caja</AlertDialogTitle>
             <AlertDialogDescription>
               El saldo de efectivo que queda en caja es el que se arrastra al dia siguiente.
               Confirme que coincide con el efectivo fisico.
-              Una vez cerrado, no se podran agregar mas transacciones a este dia.
+              Una vez cerrado, no se podran agregar mas movimientos a este dia.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-3 py-2">

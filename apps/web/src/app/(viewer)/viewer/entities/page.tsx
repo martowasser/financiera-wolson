@@ -39,14 +39,14 @@ export default function ViewerEntitiesPage() {
   return (
     <>
       <PageHeader
-        title="Entidades"
+        title="Sociedades"
         description="Sociedades, personas y terceros del sistema"
       />
       <DataTable
         columns={columns}
         data={entities}
         isLoading={isLoading}
-        emptyMessage="No hay entidades."
+        emptyMessage="No hay sociedades."
         rowKey={(row) => row.id}
         onRowClick={(row) => router.push(`/viewer/entities/${row.id}`)}
       />

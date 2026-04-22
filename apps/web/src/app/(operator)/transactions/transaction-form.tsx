@@ -128,10 +128,10 @@ export function TransactionForm({ periodId, onSuccess, onCancel }: Props) {
           })),
         },
       });
-      toast.success('Transaccion creada exitosamente');
+      toast.success('Movimiento creado exitosamente');
       onSuccess();
     } catch (err: unknown) {
-      toast.error((err as Error).message || 'Error al crear transaccion');
+      toast.error((err as Error).message || 'Error al crear movimiento');
     } finally {
       setSubmitting(false);
     }
@@ -140,7 +140,7 @@ export function TransactionForm({ periodId, onSuccess, onCancel }: Props) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Nueva Transaccion</CardTitle>
+        <CardTitle className="text-base">Nuevo Movimiento</CardTitle>
         <Button variant="ghost" size="sm" onClick={onCancel}>
           <X className="h-4 w-4" />
         </Button>
@@ -164,7 +164,7 @@ export function TransactionForm({ periodId, onSuccess, onCancel }: Props) {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="INCOME">Ingreso</SelectItem>
-                  <SelectItem value="EXPENSE">Egreso</SelectItem>
+                  <SelectItem value="EXPENSE">Gasto</SelectItem>
                   <SelectItem value="TRANSFER">Transferencia</SelectItem>
                   <SelectItem value="BANK_FEE">Gasto Bancario</SelectItem>
                   <SelectItem value="ADJUSTMENT">Ajuste</SelectItem>
@@ -200,7 +200,7 @@ export function TransactionForm({ periodId, onSuccess, onCancel }: Props) {
           {/* Entries */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Lineas del Asiento</Label>
+              <Label className="text-sm font-medium">Lineas del Movimiento</Label>
               <div className="flex items-center gap-2">
                 {isBalanced ? (
                   <Badge variant="default" className="gap-1 bg-green-600">

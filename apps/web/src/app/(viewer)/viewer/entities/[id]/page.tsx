@@ -72,7 +72,7 @@ export default function ViewerEntityDetailPage({ params }: { params: Promise<{ i
   return (
     <>
       <PageHeader
-        title={loadingEntity ? 'Cargando...' : entity?.name ?? 'Entidad'}
+        title={loadingEntity ? 'Cargando...' : entity?.name ?? 'Sociedad'}
         description={
           entity
             ? `${typeLabels[entity.type] ?? entity.type}${entity.taxId ? ` — CUIT: ${entity.taxId}` : ''}`
