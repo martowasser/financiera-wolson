@@ -479,7 +479,7 @@ function SociedadMemberFormDialog({
                 searchPlaceholder="Buscar..."
               />
               <p className="text-xs text-muted-foreground">
-                Socios usan cuentas OWNER_CURRENT (con %). Bancos propios de la sociedad van al 0%.
+                Cuentas corrientes de socios llevan su % de participación. Bancos propios de la sociedad van sin % (0%).
               </p>
             </div>
             {!isBank && (
