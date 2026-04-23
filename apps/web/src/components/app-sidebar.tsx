@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -9,6 +9,7 @@ import {
   ArrowLeftRight,
   CalendarCheck,
   Building2,
+  User,
   Wallet,
   Home,
   FileText,
@@ -20,12 +21,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { isNavItemActive } from './sidebar-utils';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/transactions', label: 'Movimientos', icon: ArrowLeftRight },
   { href: '/period', label: 'Cierre de Caja', icon: CalendarCheck },
-  { href: '/entities', label: 'Sociedades', icon: Building2 },
+  { href: '/entities?tab=sociedades', label: 'Sociedades', icon: Building2 },
+  { href: '/entities?tab=personas', label: 'Personas', icon: User },
   { href: '/accounts', label: 'Cuentas', icon: Wallet },
   { href: '/properties', label: 'Propiedades', icon: Home },
   { href: '/leases', label: 'Contratos', icon: FileText },
@@ -36,6 +39,8 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get('tab');
   const { user, logout } = useAuth();
 
   return (
@@ -53,7 +58,7 @@ export function AppSidebar() {
       <ScrollArea className="flex-1 px-2 py-2">
         <nav className="flex flex-col gap-0.5">
           {navItems.map((item) => {
-            const active = pathname.startsWith(item.href);
+            const active = isNavItemActive(item.href, pathname, currentTab);
             return (
               <Link
                 key={item.href}

@@ -13,12 +13,20 @@ export function actionCommands(router: Router): PaletteCommand[] {
       run: () => router.push('/transactions?new=1'),
     },
     {
-      id: 'action-new-entity',
+      id: 'action-new-sociedad',
       label: 'Nueva Sociedad',
       group: 'Acciones',
-      keywords: ['entidad', 'persona', 'empresa', 'crear'],
+      keywords: ['sociedad', 'empresa', 'crear'],
       hint: 'C',
-      run: () => router.push('/entities?new=1'),
+      run: () => router.push('/entities?tab=sociedades&new=1'),
+    },
+    {
+      id: 'action-new-persona',
+      label: 'Nueva Persona',
+      group: 'Acciones',
+      keywords: ['persona', 'financiera', 'tercero', 'crear'],
+      hint: 'C',
+      run: () => router.push('/entities?tab=personas&new=1'),
     },
     {
       id: 'action-close-period',

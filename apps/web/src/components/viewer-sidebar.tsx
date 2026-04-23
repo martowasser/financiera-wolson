@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -9,21 +9,26 @@ import {
   TrendingUpDown,
   Home,
   Building2,
+  User,
   LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { isNavItemActive } from './sidebar-utils';
 
 const navItems = [
   { href: '/viewer/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/viewer/income-expenses', label: 'Ingresos y Gastos', icon: TrendingUpDown },
   { href: '/viewer/leases', label: 'Alquileres', icon: Home },
-  { href: '/viewer/entities', label: 'Sociedades', icon: Building2 },
+  { href: '/viewer/entities?tab=sociedades', label: 'Sociedades', icon: Building2 },
+  { href: '/viewer/entities?tab=personas', label: 'Personas', icon: User },
 ];
 
 export function ViewerSidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get('tab');
   const { user, logout } = useAuth();
 
   return (
@@ -41,7 +46,7 @@ export function ViewerSidebar() {
       <ScrollArea className="flex-1 px-2 py-2">
         <nav className="flex flex-col gap-0.5">
           {navItems.map((item) => {
-            const active = pathname.startsWith(item.href);
+            const active = isNavItemActive(item.href, pathname, currentTab);
             return (
               <Link
                 key={item.href}
