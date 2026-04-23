@@ -62,7 +62,7 @@ describe('Ownership Routes', () => {
 
       expect(res.statusCode).toBe(200);
       const body = res.json();
-      expect(body.isValid).toBe(true);
+      expect(body.valid).toBe(true);
       expect(body.totalPercentage).toBe(10000);
       expect(body.remaining).toBe(0);
     });
@@ -84,7 +84,7 @@ describe('Ownership Routes', () => {
 
       expect(res.statusCode).toBe(200);
       const body = res.json();
-      expect(body.isValid).toBe(false);
+      expect(body.valid).toBe(false);
       expect(body.remaining).toBe(5000);
     });
   });

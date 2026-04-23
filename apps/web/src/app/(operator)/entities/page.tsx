@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef, type FormEvent } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useCallback, useMemo, useRef, type FormEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useQuery } from '@/lib/hooks';
 import { useKeyboardShortcuts } from '@/lib/shortcuts/use-keyboard-shortcuts';
@@ -48,18 +48,30 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function EntitiesPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const showNew = searchParams.get('new') === '1';
-  const urlDetailId = searchParams.get('id');
+  const detailId = searchParams.get('id');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(showNew);
   const [editing, setEditing] = useState<Entity | null>(null);
-  const [detailId, setDetailId] = useState<string | null>(urlDetailId);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setDetailId(urlDetailId);
-  }, [urlDetailId]);
+  const openDetail = useCallback(
+    (id: string) => router.push(`/entities?id=${id}`),
+    [router],
+  );
+
+  const closeDetail = useCallback(() => {
+    // "Volver" should pop history so that users arriving from another page
+    // (e.g. cmd+k from /dashboard) land back where they were. If there's no
+    // history to pop (direct link), fall back to the list.
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/entities');
+    }
+  }, [router]);
 
   const shortcuts = useMemo<Shortcut[]>(
     () => [
@@ -123,7 +135,7 @@ export default function EntitiesPage() {
     return (
       <EntityDetail
         entityId={detailId}
-        onBack={() => setDetailId(null)}
+        onBack={closeDetail}
       />
     );
   }
@@ -153,7 +165,7 @@ export default function EntitiesPage() {
         data={entities}
         isLoading={isLoading}
         rowKey={(r) => r.id}
-        onRowClick={(r) => setDetailId(r.id)}
+        onRowClick={(r) => openDetail(r.id)}
         emptyMessage="No hay sociedades."
       />
 

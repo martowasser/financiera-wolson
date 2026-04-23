@@ -1,11 +1,11 @@
 import prisma from '../../lib/prisma.js';
 import { notFound, conflict } from '../../lib/errors.js';
+import { businessToday, toBusinessDate } from '../../lib/business-date.js';
 
 // ─── Get or create today's period ───────────────────────────────────────────
 
 export async function getOrCreateToday() {
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
+  const today = businessToday();
 
   const existing = await prisma.period.findUnique({ where: { date: today } });
   if (existing) return existing;
@@ -49,8 +49,7 @@ export async function getById(id: string) {
 // ─── Get period by date ─────────────────────────────────────────────────────
 
 export async function getByDate(date: Date) {
-  const normalized = new Date(date);
-  normalized.setUTCHours(0, 0, 0, 0);
+  const normalized = toBusinessDate(date);
 
   const period = await prisma.period.findUnique({ where: { date: normalized } });
 

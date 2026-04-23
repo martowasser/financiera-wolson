@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@/lib/hooks';
 import type { PaletteCommand } from './types';
@@ -30,10 +30,17 @@ const ENTITY_TYPE_LABEL: Record<string, string> = {
   THIRD_PARTY: 'Tercero',
 };
 
-export function usePaletteData(): PaletteCommand[] {
+export function usePaletteData(isOpen: boolean): PaletteCommand[] {
   const router = useRouter();
-  const { data: entities } = useQuery<EntitySummary[]>('/entities');
-  const { data: transactions } = useQuery<TransactionSummary[]>('/transactions');
+  const { data: entities, refetch: refetchEntities } = useQuery<EntitySummary[]>('/entities');
+  const { data: transactions, refetch: refetchTransactions } = useQuery<TransactionSummary[]>('/transactions');
+
+  useEffect(() => {
+    if (isOpen) {
+      refetchEntities();
+      refetchTransactions();
+    }
+  }, [isOpen, refetchEntities, refetchTransactions]);
 
   return useMemo(() => {
     const items: PaletteCommand[] = [];

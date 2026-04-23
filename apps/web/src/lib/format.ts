@@ -29,7 +29,12 @@ export function inputToCentavos(value: string): string {
 
 export function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return d.toLocaleDateString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 
 export function formatDateTime(dateStr: string): string {

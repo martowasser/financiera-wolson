@@ -80,10 +80,10 @@ export function EntityDetail({ entityId, onBack }: Props) {
 
   const { data: entity } = useQuery<Entity>(`/entities/${entityId}`);
   const { data: ownerships, refetch: refetchOwnerships } = useQuery<Ownership[]>(
-    `/ownerships/entity/${entityId}`,
+    entity?.type === 'COMPANY' ? `/ownerships/entity/${entityId}` : null,
   );
   const { data: validation, refetch: refetchValidation } = useQuery<ValidationResult>(
-    `/ownerships/entity/${entityId}/validate`,
+    entity?.type === 'COMPANY' ? `/ownerships/entity/${entityId}/validate` : null,
   );
   const { data: members, refetch: refetchMembers } = useQuery<SociedadMember[]>(
     entity?.type === 'COMPANY' ? `/sociedad-members/sociedad/${entityId}` : null,
@@ -158,60 +158,62 @@ export function EntityDetail({ entityId, onBack }: Props) {
         <p className="text-sm text-muted-foreground">{entity.notes}</p>
       )}
 
-      {/* Ownership section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-base">Socios / Ownership</CardTitle>
-            {isValid ? (
-              <Badge variant="default" className="gap-1 bg-green-600">
-                <Check className="h-3 w-3" /> {totalPct}%
-              </Badge>
-            ) : (
-              <Badge variant="destructive" className="gap-1">
-                <AlertTriangle className="h-3 w-3" /> {totalPct}% (debe ser 100%)
-              </Badge>
-            )}
-          </div>
-          <Button size="sm" onClick={() => setShowOwnershipForm(true)}>
-            <Plus className="h-3 w-3 mr-1" /> Agregar Socio
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {(!ownerships || ownerships.length === 0) ? (
-            <p className="text-sm text-muted-foreground py-4">No hay socios configurados.</p>
-          ) : (
-            <div className="space-y-2">
-              {ownerships.map((o) => (
-                <div
-                  key={o.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium text-sm">{o.owner.name}</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {(o.percentage / 100).toFixed(2)}%
-                    </Badge>
-                    {o.validUntil && (
-                      <span className="text-xs text-muted-foreground">
-                        hasta {formatDate(o.validUntil)}
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteOwnership(o.id)}
-                    title="Desactivar"
-                  >
-                    <Trash2 className="h-3 w-3 text-destructive" />
-                  </Button>
-                </div>
-              ))}
+      {/* Ownership section — only meaningful for sociedades */}
+      {entity.type === 'COMPANY' && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-base">Socios / Ownership</CardTitle>
+              {isValid ? (
+                <Badge variant="default" className="gap-1 bg-green-600">
+                  <Check className="h-3 w-3" /> {totalPct}%
+                </Badge>
+              ) : (
+                <Badge variant="destructive" className="gap-1">
+                  <AlertTriangle className="h-3 w-3" /> {totalPct}% (debe ser 100%)
+                </Badge>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <Button size="sm" onClick={() => setShowOwnershipForm(true)}>
+              <Plus className="h-3 w-3 mr-1" /> Agregar Socio
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {(!ownerships || ownerships.length === 0) ? (
+              <p className="text-sm text-muted-foreground py-4">No hay socios configurados.</p>
+            ) : (
+              <div className="space-y-2">
+                {ownerships.map((o) => (
+                  <div
+                    key={o.id}
+                    className="flex items-center justify-between rounded-md border px-3 py-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium text-sm">{o.owner.name}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {(o.percentage / 100).toFixed(2)}%
+                      </Badge>
+                      {o.validUntil && (
+                        <span className="text-xs text-muted-foreground">
+                          hasta {formatDate(o.validUntil)}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteOwnership(o.id)}
+                      title="Desactivar"
+                    >
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {entity.type === 'COMPANY' && (
         <Card>

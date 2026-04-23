@@ -115,6 +115,7 @@ export async function refresh(refreshTokenStr: string) {
   });
 
   return {
+    user: excludePassword(storedToken.user),
     accessToken,
     refreshToken: newRefreshTokenStr,
   };

@@ -12,7 +12,7 @@ import {
   periodStatusLabels,
   label,
 } from '@/lib/labels';
-import { formatMoney, formatDateTime } from '@/lib/format';
+import { formatMoney, formatDate, formatDateTime } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -149,7 +149,7 @@ export default function TransactionsPage() {
     <>
       <PageHeader
         title="Movimientos"
-        description={period ? `Dia: ${new Date(period.date).toLocaleDateString('es-AR')} — ${label(periodStatusLabels, period.status)}` : ''}
+        description={period ? `Dia: ${formatDate(period.date)} — ${label(periodStatusLabels, period.status)}` : ''}
         actions={
           <Button onClick={() => setShowForm(true)} disabled={period?.status === 'CLOSED'}>
             <Plus className="mr-1 h-4 w-4" /> Nuevo Movimiento

@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as leaseService from './service.js';
 import { authenticate, requireRole } from '../../lib/auth-middleware.js';
+import { nullishString } from '../../lib/zod-helpers.js';
 
 const createLeaseSchema = z.object({
   propertyId: z.string().min(1),
@@ -9,10 +10,10 @@ const createLeaseSchema = z.object({
   currency: z.enum(['ARS', 'USD']),
   baseAmount: z.coerce.bigint(),
   managedBy: z.enum(['DIRECT', 'THIRD_PARTY']).optional(),
-  thirdPartyEntityId: z.string().optional(),
+  thirdPartyEntityId: nullishString,
   startDate: z.coerce.date(),
   endDate: z.coerce.date().optional(),
-  notes: z.string().optional(),
+  notes: nullishString,
 });
 
 const updateLeaseSchema = z.object({
@@ -20,7 +21,7 @@ const updateLeaseSchema = z.object({
   managedBy: z.enum(['DIRECT', 'THIRD_PARTY']).optional(),
   thirdPartyEntityId: z.string().nullable().optional(),
   endDate: z.coerce.date().optional(),
-  notes: z.string().optional(),
+  notes: nullishString,
   isActive: z.boolean().optional(),
 });
 
@@ -30,8 +31,8 @@ const addPriceSchema = z.object({
 });
 
 const listQuerySchema = z.object({
-  propertyId: z.string().optional(),
-  tenantId: z.string().optional(),
+  propertyId: nullishString,
+  tenantId: nullishString,
   isActive: z.coerce.boolean().optional(),
 });
 

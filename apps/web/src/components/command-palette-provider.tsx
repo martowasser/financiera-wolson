@@ -24,7 +24,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
 
-  const dataCommands = usePaletteData();
+  const dataCommands = usePaletteData(isOpen);
   const commands: PaletteCommand[] = useMemo(
     () => [...actionCommands(router), ...navigationCommands(router), ...dataCommands],
     [router, dataCommands],

@@ -2,9 +2,10 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as settlementService from './service.js';
 import { authenticate, requireRole } from '../../lib/auth-middleware.js';
+import { nullishString } from '../../lib/zod-helpers.js';
 
 const listQuerySchema = z.object({
-  entityId: z.string().optional(),
+  entityId: nullishString,
   status: z.enum(['DRAFT', 'APPROVED', 'DISTRIBUTED']).optional(),
 });
 
@@ -13,7 +14,7 @@ const createSettlementSchema = z.object({
   periodFrom: z.coerce.date(),
   periodTo: z.coerce.date(),
   currency: z.enum(['ARS', 'USD']),
-  notes: z.string().optional(),
+  notes: nullishString,
 });
 
 export default async function settlementRoutes(fastify: FastifyInstance) {

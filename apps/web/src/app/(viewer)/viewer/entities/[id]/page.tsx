@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery } from '@/lib/hooks';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, formatDate } from '@/lib/format';
 import { ArrowLeft } from 'lucide-react';
 import { accountTypeLabels, label } from '@/lib/labels';
 
@@ -127,7 +127,7 @@ export default function ViewerEntityDetailPage({ params }: { params: Promise<{ i
                           {(o.percentage / 100).toFixed(0)}%
                         </td>
                         <td className="px-4 py-2 text-muted-foreground">
-                          {new Date(o.validFrom).toLocaleDateString('es-AR')}
+                          {formatDate(o.validFrom)}
                         </td>
                       </tr>
                     ))}

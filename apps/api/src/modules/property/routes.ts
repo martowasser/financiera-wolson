@@ -2,27 +2,28 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as propertyService from './service.js';
 import { authenticate, requireRole } from '../../lib/auth-middleware.js';
+import { nullishString } from '../../lib/zod-helpers.js';
 
 const createPropertySchema = z.object({
   entityId: z.string().min(1),
   name: z.string().min(1),
-  address: z.string().optional(),
+  address: nullishString,
   type: z.enum(['APARTMENT', 'COMMERCIAL', 'OFFICE', 'PARKING', 'WAREHOUSE', 'LAND', 'OTHER']).optional(),
-  notes: z.string().optional(),
+  notes: nullishString,
 });
 
 const updatePropertySchema = z.object({
   name: z.string().min(1).optional(),
-  address: z.string().optional(),
+  address: nullishString,
   type: z.enum(['APARTMENT', 'COMMERCIAL', 'OFFICE', 'PARKING', 'WAREHOUSE', 'LAND', 'OTHER']).optional(),
-  notes: z.string().optional(),
+  notes: nullishString,
   isActive: z.boolean().optional(),
 });
 
 const listQuerySchema = z.object({
-  entityId: z.string().optional(),
+  entityId: nullishString,
   type: z.enum(['APARTMENT', 'COMMERCIAL', 'OFFICE', 'PARKING', 'WAREHOUSE', 'LAND', 'OTHER']).optional(),
-  search: z.string().optional(),
+  search: nullishString,
   isActive: z.coerce.boolean().optional(),
 });
 

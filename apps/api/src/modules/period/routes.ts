@@ -2,9 +2,10 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as periodService from './service.js';
 import { authenticate, requireRole } from '../../lib/auth-middleware.js';
+import { nullishString } from '../../lib/zod-helpers.js';
 
 const closePeriodSchema = z.object({
-  closingNotes: z.string().optional(),
+  closingNotes: nullishString,
 });
 
 export default async function periodRoutes(fastify: FastifyInstance) {

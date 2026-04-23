@@ -2,9 +2,10 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as reconciliationService from './service.js';
 import { authenticate, requireRole } from '../../lib/auth-middleware.js';
+import { nullishString } from '../../lib/zod-helpers.js';
 
 const listQuerySchema = z.object({
-  accountId: z.string().optional(),
+  accountId: nullishString,
   status: z.enum(['IN_PROGRESS', 'COMPLETED', 'DISCREPANCY']).optional(),
 });
 
@@ -12,15 +13,15 @@ const createReconciliationSchema = z.object({
   accountId: z.string().min(1),
   date: z.coerce.date(),
   bankBalance: z.coerce.bigint(),
-  notes: z.string().optional(),
+  notes: nullishString,
 });
 
 const addItemSchema = z.object({
   description: z.string().min(1),
   bankAmount: z.coerce.bigint(),
-  externalRef: z.string().optional(),
-  importedFrom: z.string().optional(),
-  notes: z.string().optional(),
+  externalRef: nullishString,
+  importedFrom: nullishString,
+  notes: nullishString,
 });
 
 const matchItemSchema = z.object({

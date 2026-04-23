@@ -154,7 +154,7 @@ export async function validateOwnershipSum(entityId: string) {
   return {
     entityId,
     totalPercentage,
-    isValid: totalPercentage === 10000,
+    valid: totalPercentage === 10000,
     remaining: 10000 - totalPercentage,
     ownerships: ownerships.map((o) => ({
       id: o.id,

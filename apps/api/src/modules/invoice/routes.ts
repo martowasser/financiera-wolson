@@ -2,9 +2,10 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as invoiceService from './service.js';
 import { authenticate, requireRole } from '../../lib/auth-middleware.js';
+import { nullishString } from '../../lib/zod-helpers.js';
 
 const listQuerySchema = z.object({
-  leaseId: z.string().optional(),
+  leaseId: nullishString,
   status: z.enum(['PENDING', 'PAID', 'PARTIAL', 'CANCELLED']).optional(),
   periodMonth: z.coerce.number().int().min(1).max(12).optional(),
   periodYear: z.coerce.number().int().optional(),
@@ -19,18 +20,18 @@ const createInvoiceSchema = z.object({
   retentions: z.array(z.object({
     concept: z.string().min(1),
     amount: z.coerce.bigint(),
-    notes: z.string().optional(),
+    notes: nullishString,
   })).optional(),
-  notes: z.string().optional(),
+  notes: nullishString,
 });
 
 const collectSchema = z.object({
   paymentMethod: z.enum(['CASH', 'BANK_TRANSFER', 'CHECK']),
-  checkNumber: z.string().optional(),
-  bankReference: z.string().optional(),
+  checkNumber: nullishString,
+  bankReference: nullishString,
   debitAccountId: z.string().min(1),
   creditAccountId: z.string().min(1),
-  notes: z.string().optional(),
+  notes: nullishString,
 });
 
 export default async function invoiceRoutes(fastify: FastifyInstance) {

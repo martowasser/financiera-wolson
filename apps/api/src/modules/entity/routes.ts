@@ -2,25 +2,26 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as entityService from './service.js';
 import { authenticate, requireRole } from '../../lib/auth-middleware.js';
+import { nullishString } from '../../lib/zod-helpers.js';
 
 const createEntitySchema = z.object({
   name: z.string().min(1),
   type: z.enum(['COMPANY', 'PERSON', 'FIRM', 'THIRD_PARTY']),
-  taxId: z.string().optional(),
-  notes: z.string().optional(),
+  taxId: nullishString,
+  notes: nullishString,
 });
 
 const updateEntitySchema = z.object({
   name: z.string().min(1).optional(),
   type: z.enum(['COMPANY', 'PERSON', 'FIRM', 'THIRD_PARTY']).optional(),
-  taxId: z.string().optional(),
-  notes: z.string().optional(),
+  taxId: nullishString,
+  notes: nullishString,
   isActive: z.boolean().optional(),
 });
 
 const listQuerySchema = z.object({
   type: z.enum(['COMPANY', 'PERSON', 'FIRM', 'THIRD_PARTY']).optional(),
-  search: z.string().optional(),
+  search: nullishString,
   isActive: z.coerce.boolean().optional(),
   onlySociedades: z.coerce.boolean().optional(),
 });
