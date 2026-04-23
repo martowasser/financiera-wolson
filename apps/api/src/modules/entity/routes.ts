@@ -24,6 +24,7 @@ const listQuerySchema = z.object({
   search: nullishString,
   isActive: z.coerce.boolean().optional(),
   onlySociedades: z.coerce.boolean().optional(),
+  onlyPersonas: z.coerce.boolean().optional(),
 });
 
 export default async function entityRoutes(fastify: FastifyInstance) {

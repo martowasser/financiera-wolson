@@ -7,6 +7,7 @@ interface ListFilters {
   search?: string;
   isActive?: boolean;
   onlySociedades?: boolean;
+  onlyPersonas?: boolean;
 }
 
 export async function list(filters?: ListFilters) {
@@ -38,6 +39,8 @@ export async function list(filters?: ListFilters) {
       .map((m) => m.sociedadId);
     where.type = 'COMPANY';
     where.id = { in: validSociedadIds };
+  } else if (filters?.onlyPersonas) {
+    where.type = { in: ['PERSON', 'FIRM', 'THIRD_PARTY'] };
   }
 
   const entities = await prisma.entity.findMany({

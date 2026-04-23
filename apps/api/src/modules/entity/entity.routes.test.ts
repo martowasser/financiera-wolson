@@ -51,6 +51,26 @@ describe('Entity Routes', () => {
       expect(body[0].type).toBe('COMPANY');
     });
 
+    it('filters by onlyPersonas (excludes COMPANY)', async () => {
+      const user = await createTestUser();
+      const token = getAuthToken(user);
+      await createTestEntity({ name: 'Acme Corp', type: 'COMPANY' });
+      await createTestEntity({ name: 'John Doe', type: 'PERSON' });
+      await createTestEntity({ name: 'Remax', type: 'FIRM' });
+      await createTestEntity({ name: 'Some Vendor', type: 'THIRD_PARTY' });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/entities?onlyPersonas=true',
+        headers: authHeader(token),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body).toHaveLength(3);
+      expect(body.every((e: { type: string }) => e.type !== 'COMPANY')).toBe(true);
+    });
+
     it('filters by search', async () => {
       const user = await createTestUser();
       const token = getAuthToken(user);
