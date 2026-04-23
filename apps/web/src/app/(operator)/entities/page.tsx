@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useRef, type FormEvent } from 'react';
+import { useState, useCallback, useMemo, useRef, type FormEvent, type RefObject } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useQuery } from '@/lib/hooks';
@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Pencil } from 'lucide-react';
 import { EntityDetail } from './entity-detail';
 
@@ -40,6 +41,8 @@ type Entity = {
   isActive: boolean;
 };
 
+type TabValue = 'sociedades' | 'personas';
+
 const typeLabels: Record<string, string> = {
   COMPANY: 'Sociedad',
   PERSON: 'Persona',
@@ -47,15 +50,61 @@ const typeLabels: Record<string, string> = {
   THIRD_PARTY: 'Tercero',
 };
 
+// Spanish gendered article for "Nueva/Nuevo {tipo}".
+const typeArticle: Record<string, string> = {
+  COMPANY: 'Nueva',
+  PERSON: 'Nueva',
+  FIRM: 'Nueva',
+  THIRD_PARTY: 'Nuevo',
+};
+
+const tabDefaultType: Record<TabValue, string> = {
+  sociedades: 'COMPANY',
+  personas: 'PERSON',
+};
+
+const tabDescription: Record<TabValue, string> = {
+  sociedades: 'Empresas y sociedades',
+  personas: 'Personas físicas, financieras y terceros',
+};
+
 export default function EntitiesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const showNew = searchParams.get('new') === '1';
   const detailId = searchParams.get('id');
-  const [search, setSearch] = useState('');
-  const [showForm, setShowForm] = useState(showNew);
+  const tabParam = searchParams.get('tab');
+  const activeTab: TabValue = tabParam === 'personas' ? 'personas' : 'sociedades';
+
+  const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Entity | null>(null);
+  const [refetchTick, setRefetchTick] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Derived — the form is open when either ?new=1 (URL-driven from cmd+k etc.),
+  // the user clicked the create button locally, or a row is being edited.
+  const showForm = showNew || createOpen || editing !== null;
+
+  const closeForm = useCallback(() => {
+    setCreateOpen(false);
+    setEditing(null);
+    if (showNew) {
+      router.replace(`/entities?tab=${activeTab}`);
+    }
+  }, [router, activeTab, showNew]);
+
+  const handleCreateClick = useCallback(() => {
+    setEditing(null);
+    setCreateOpen(true);
+  }, []);
+
+  const handleTabChange = useCallback(
+    (v: string | null) => {
+      const next: TabValue = v === 'personas' ? 'personas' : 'sociedades';
+      if (next !== activeTab) router.push(`/entities?tab=${next}`);
+    },
+    [router, activeTab],
+  );
 
   const openDetail = useCallback(
     (id: string) => router.push(`/entities?id=${id}`),
@@ -63,51 +112,114 @@ export default function EntitiesPage() {
   );
 
   const closeDetail = useCallback(() => {
-    // "Volver" should pop history so that users arriving from another page
-    // (e.g. cmd+k from /dashboard) land back where they were. If there's no
-    // history to pop (direct link), fall back to the list.
+    // "Volver" pops history so users arriving from another page (cmd+k from
+    // /dashboard, say) land back where they came from. If there's no history
+    // to pop (direct link), fall back to the list with the active tab.
     if (typeof window !== 'undefined' && window.history.length > 1) {
       router.back();
     } else {
-      router.push('/entities');
+      router.push(`/entities?tab=${activeTab}`);
     }
-  }, [router]);
+  }, [router, activeTab]);
+
+  const defaultType = tabDefaultType[activeTab];
+  const newLabel = activeTab === 'sociedades' ? 'Nueva Sociedad' : 'Nueva Persona';
 
   const shortcuts = useMemo<Shortcut[]>(
     () => [
       {
         id: 'entity-create',
         keys: ['c'],
-        label: 'Nueva sociedad',
+        label: newLabel,
         group: 'Sociedades',
         when: () => !detailId && !showForm,
-        run: () => {
-          setEditing(null);
-          setShowForm(true);
-        },
+        run: handleCreateClick,
       },
       {
         id: 'entity-focus-search',
         keys: ['/'],
         label: 'Buscar',
         group: 'Sociedades',
-        when: () => !detailId,
+        when: () => !detailId && !showForm,
         run: () => searchInputRef.current?.focus(),
       },
     ],
-    [detailId, showForm],
+    [detailId, showForm, newLabel, handleCreateClick],
   );
   useKeyboardShortcuts(shortcuts);
 
-  const { data: entities, isLoading, refetch } = useQuery<Entity[]>('/entities', {
-    search: search || undefined,
-  });
-
   const handleSaved = useCallback(() => {
-    setShowForm(false);
+    setCreateOpen(false);
     setEditing(null);
-    refetch();
-  }, [refetch]);
+    if (showNew) router.replace(`/entities?tab=${activeTab}`);
+    setRefetchTick((t) => t + 1);
+  }, [router, activeTab, showNew]);
+
+  if (detailId) {
+    return <EntityDetail entityId={detailId} onBack={closeDetail} />;
+  }
+
+  return (
+    <>
+      <PageHeader
+        title="Sociedades y Personas"
+        description={tabDescription[activeTab]}
+        actions={
+          <Button onClick={handleCreateClick}>
+            <Plus className="mr-1 h-4 w-4" /> {newLabel}
+          </Button>
+        }
+      />
+
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList>
+          <TabsTrigger value="sociedades">Sociedades</TabsTrigger>
+          <TabsTrigger value="personas">Personas</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Keyed so switching tabs remounts the list and resets local search. */}
+      <EntityList
+        key={activeTab}
+        activeTab={activeTab}
+        refetchTick={refetchTick}
+        searchInputRef={searchInputRef}
+        onOpenDetail={openDetail}
+        onEdit={setEditing}
+      />
+
+      <EntityFormDialog
+        key={editing?.id ?? `new-${defaultType}`}
+        open={showForm}
+        entity={editing}
+        defaultType={defaultType}
+        onClose={closeForm}
+        onSaved={handleSaved}
+      />
+    </>
+  );
+}
+
+function EntityList({
+  activeTab,
+  refetchTick,
+  searchInputRef,
+  onOpenDetail,
+  onEdit,
+}: {
+  activeTab: TabValue;
+  refetchTick: number;
+  searchInputRef: RefObject<HTMLInputElement | null>;
+  onOpenDetail: (id: string) => void;
+  onEdit: (row: Entity) => void;
+}) {
+  const [search, setSearch] = useState('');
+
+  const queryParams = activeTab === 'sociedades'
+    ? { type: 'COMPANY', search: search || undefined, _t: refetchTick }
+    : { onlyPersonas: true, search: search || undefined, _t: refetchTick };
+
+  const { data: entities, isLoading } = useQuery<Entity[]>('/entities', queryParams);
 
   const columns: Column<Entity>[] = [
     { header: 'Nombre', accessor: 'name' },
@@ -124,34 +236,15 @@ export default function EntitiesPage() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={(e) => { e.stopPropagation(); setEditing(row); setShowForm(true); }}
+        onClick={(e) => { e.stopPropagation(); onEdit(row); }}
       >
         <Pencil className="h-3 w-3" />
       </Button>
     ), className: 'w-12' },
   ];
 
-  if (detailId) {
-    return (
-      <EntityDetail
-        entityId={detailId}
-        onBack={closeDetail}
-      />
-    );
-  }
-
   return (
     <>
-      <PageHeader
-        title="Sociedades"
-        description="Sociedades, personas y terceros"
-        actions={
-          <Button onClick={() => { setEditing(null); setShowForm(true); }}>
-            <Plus className="mr-1 h-4 w-4" /> Nueva Sociedad
-          </Button>
-        }
-      />
-
       <Input
         ref={searchInputRef}
         placeholder="Buscar..."
@@ -165,15 +258,8 @@ export default function EntitiesPage() {
         data={entities}
         isLoading={isLoading}
         rowKey={(r) => r.id}
-        onRowClick={(r) => openDetail(r.id)}
-        emptyMessage="No hay sociedades."
-      />
-
-      <EntityFormDialog
-        open={showForm}
-        entity={editing}
-        onClose={() => { setShowForm(false); setEditing(null); }}
-        onSaved={handleSaved}
+        onRowClick={(r) => onOpenDetail(r.id)}
+        emptyMessage={activeTab === 'sociedades' ? 'No hay sociedades.' : 'No hay personas.'}
       />
     </>
   );
@@ -182,22 +268,27 @@ export default function EntitiesPage() {
 function EntityFormDialog({
   open,
   entity,
+  defaultType = 'COMPANY',
   onClose,
   onSaved,
 }: {
   open: boolean;
   entity: Entity | null;
+  defaultType?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [name, setName] = useState(entity?.name || '');
-  const [type, setType] = useState(entity?.type || 'COMPANY');
+  const [type, setType] = useState(entity?.type || defaultType);
   const [taxId, setTaxId] = useState(entity?.taxId || '');
   const [notes, setNotes] = useState(entity?.notes || '');
   const [saving, setSaving] = useState(false);
 
-  // Reset form when entity changes
   const isEdit = !!entity;
+  const typeLabel = typeLabels[type] || 'Entidad';
+  const title = isEdit
+    ? `Editar ${typeLabel}`
+    : `${typeArticle[type] ?? 'Nueva'} ${typeLabel}`;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -208,13 +299,13 @@ function EntityFormDialog({
           method: 'PUT',
           body: { name, type, taxId: taxId || null, notes: notes || null },
         });
-        toast.success('Sociedad actualizada');
+        toast.success(`${typeLabel} actualizada`);
       } else {
         await apiFetch('/entities', {
           method: 'POST',
           body: { name, type, taxId: taxId || null, notes: notes || null },
         });
-        toast.success('Sociedad creada');
+        toast.success(`${typeLabel} creada`);
       }
       onSaved();
     } catch (err: unknown) {
@@ -229,7 +320,7 @@ function EntityFormDialog({
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{isEdit ? 'Editar Sociedad' : 'Nueva Sociedad'}</DialogTitle>
+            <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-1">
