@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
 import { conflict, unprocessable, notFound } from '../../lib/errors.js';
+import { distribute } from '../../lib/distribute.js';
 
 // ─── Sequential code generator ──────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ interface CreateTransactionInput {
   checkNumber?: string | null;
   bankReference?: string | null;
   invoiceId?: string | null;
+  sociedadId?: string | null;
   notes?: string | null;
   idempotencyKey?: string | null;
   entries: Array<{
@@ -35,41 +37,23 @@ interface CreateTransactionInput {
   createdById: string;
 }
 
+type FinalEntry = {
+  accountId: string;
+  type: 'DEBIT' | 'CREDIT';
+  amount: bigint;
+  description?: string | null;
+};
+
 // ─── Create transaction (core double-entry) ─────────────────────────────────
 
 export async function createTransaction(data: CreateTransactionInput) {
-  // Validate entries balance at application level
-  const totalDebits = data.entries
-    .filter((e) => e.type === 'DEBIT')
-    .reduce((sum, e) => sum + e.amount, 0n);
-  const totalCredits = data.entries
-    .filter((e) => e.type === 'CREDIT')
-    .reduce((sum, e) => sum + e.amount, 0n);
-
-  if (totalDebits !== totalCredits) {
-    throw unprocessable(
-      `Los entries no balancean: débitos=${totalDebits}, créditos=${totalCredits}`,
-      'ENTRIES_NOT_BALANCED',
-      { totalDebits: totalDebits.toString(), totalCredits: totalCredits.toString() },
-    );
-  }
-
-  if (data.entries.length < 2) {
-    throw unprocessable('Una transacción requiere al menos 2 entries', 'INSUFFICIENT_ENTRIES');
+  if (data.entries.length < 1) {
+    throw unprocessable('Una transacción requiere al menos 1 entry de origen', 'INSUFFICIENT_ENTRIES');
   }
 
   return prisma.$transaction(
     async (tx) => {
-      // 1. Lock accounts (sorted by ID to prevent deadlocks)
-      const accountIds = [...new Set(data.entries.map((e) => e.accountId))].sort();
-      await tx.$queryRaw`
-        SELECT id FROM "Account"
-        WHERE id = ANY(${accountIds}::text[])
-        ORDER BY id
-        FOR UPDATE
-      `;
-
-      // 2. Validate period is open
+      // 1. Validate period is open
       const period = await tx.period.findUnique({ where: { id: data.periodId } });
       if (!period) throw notFound('Período no encontrado');
       if (period.status !== 'OPEN') {
@@ -80,7 +64,7 @@ export async function createTransaction(data: CreateTransactionInput) {
         );
       }
 
-      // 3. Check idempotency
+      // 2. Check idempotency
       if (data.idempotencyKey) {
         const existing = await tx.transaction.findUnique({
           where: { idempotencyKey: data.idempotencyKey },
@@ -89,14 +73,15 @@ export async function createTransaction(data: CreateTransactionInput) {
         if (existing) return existing;
       }
 
-      // 4. Validate all accounts exist and are active
-      const accounts = await tx.account.findMany({
-        where: { id: { in: accountIds } },
+      // 3. Validate origin accounts exist and are active
+      const originAccountIds = [...new Set(data.entries.map((e) => e.accountId))];
+      const originAccounts = await tx.account.findMany({
+        where: { id: { in: originAccountIds } },
       });
-      if (accounts.length !== accountIds.length) {
+      if (originAccounts.length !== originAccountIds.length) {
         throw notFound('Una o más cuentas no existen');
       }
-      const inactiveAccount = accounts.find((a) => !a.isActive);
+      const inactiveAccount = originAccounts.find((a) => !a.isActive);
       if (inactiveAccount) {
         throw unprocessable(
           `La cuenta ${inactiveAccount.name} está inactiva`,
@@ -104,10 +89,114 @@ export async function createTransaction(data: CreateTransactionInput) {
         );
       }
 
-      // 5. Generate sequential code
+      // 4. Build final entries: if sociedadId set, append auto-distribution to members
+      const finalEntries: FinalEntry[] = data.entries.map((e) => ({ ...e }));
+
+      if (data.sociedadId) {
+        const sociedad = await tx.entity.findUnique({ where: { id: data.sociedadId } });
+        if (!sociedad) throw notFound('Sociedad no encontrada');
+
+        // Every origin entry must be against a CASH or BANK account (la "caja" de Mariana)
+        for (const entry of data.entries) {
+          const acc = originAccounts.find((a) => a.id === entry.accountId)!;
+          if (acc.type !== 'CASH' && acc.type !== 'BANK') {
+            throw unprocessable(
+              `La cuenta de origen "${acc.name}" debe ser CASH o BANK cuando se usa sociedad`,
+              'INVALID_ORIGIN_ACCOUNT',
+            );
+          }
+        }
+
+        // All origin accounts must share the same currency (distribution hereda moneda)
+        const originCurrencies = new Set(originAccounts.map((a) => a.currency));
+        if (originCurrencies.size !== 1) {
+          throw unprocessable(
+            'Las cuentas de origen deben compartir moneda',
+            'MIXED_CURRENCY_ORIGIN',
+          );
+        }
+        const originCurrency = originAccounts[0].currency;
+
+        // Fetch sociedad members with % > 0 whose target account matches origin currency
+        const members = await tx.sociedadMember.findMany({
+          where: {
+            sociedadId: data.sociedadId,
+            percentBps: { gt: 0 },
+            account: { type: 'OWNER_CURRENT', currency: originCurrency, isActive: true },
+          },
+          include: { account: true },
+          orderBy: { id: 'asc' },
+        });
+
+        if (members.length === 0) {
+          throw unprocessable(
+            `La sociedad no tiene socios configurados en ${originCurrency}`,
+            'SOCIEDAD_WITHOUT_MEMBERS',
+          );
+        }
+
+        const totalBps = members.reduce((sum, m) => sum + m.percentBps, 0);
+        if (totalBps !== 10000) {
+          throw unprocessable(
+            `Los porcentajes de los socios deben sumar 100% (actual: ${(totalBps / 100).toFixed(2)}%)`,
+            'MEMBER_PERCENTAGES_INVALID',
+            { totalBps },
+          );
+        }
+
+        // For each origin entry, append distributed entries of the inverse type
+        for (const originEntry of data.entries) {
+          const inverseType = originEntry.type === 'DEBIT' ? 'CREDIT' : 'DEBIT';
+          const shares = distribute(
+            originEntry.amount,
+            members.map((m) => ({ ownerId: m.accountId, percentage: m.percentBps })),
+          );
+          for (const share of shares) {
+            finalEntries.push({
+              accountId: share.ownerId,
+              type: inverseType,
+              amount: share.amount,
+              description: originEntry.description ?? null,
+            });
+          }
+        }
+      }
+
+      if (finalEntries.length < 2) {
+        throw unprocessable(
+          'Una transacción requiere al menos 2 entries',
+          'INSUFFICIENT_ENTRIES',
+        );
+      }
+
+      // 5. Balance check (always — after distribution in sociedad mode)
+      const totalDebits = finalEntries
+        .filter((e) => e.type === 'DEBIT')
+        .reduce((sum, e) => sum + e.amount, 0n);
+      const totalCredits = finalEntries
+        .filter((e) => e.type === 'CREDIT')
+        .reduce((sum, e) => sum + e.amount, 0n);
+      if (totalDebits !== totalCredits) {
+        throw unprocessable(
+          `Los entries no balancean: débitos=${totalDebits}, créditos=${totalCredits}`,
+          'ENTRIES_NOT_BALANCED',
+          { totalDebits: totalDebits.toString(), totalCredits: totalCredits.toString() },
+        );
+      }
+
+      // 6. Lock all accounts involved (origin + distributed), sorted by ID
+      const allAccountIds = [...new Set(finalEntries.map((e) => e.accountId))].sort();
+      await tx.$queryRaw`
+        SELECT id FROM "Account"
+        WHERE id = ANY(${allAccountIds}::text[])
+        ORDER BY id
+        FOR UPDATE
+      `;
+
+      // 7. Generate sequential code
       const code = await getNextCode(tx);
 
-      // 6. Create transaction + entries
+      // 8. Create transaction + entries
       const transaction = await tx.transaction.create({
         data: {
           periodId: data.periodId,
@@ -118,11 +207,12 @@ export async function createTransaction(data: CreateTransactionInput) {
           checkNumber: data.checkNumber,
           bankReference: data.bankReference,
           invoiceId: data.invoiceId,
+          sociedadId: data.sociedadId ?? null,
           notes: data.notes,
           idempotencyKey: data.idempotencyKey,
           createdById: data.createdById,
           entries: {
-            create: data.entries.map((e) => ({
+            create: finalEntries.map((e) => ({
               accountId: e.accountId,
               type: e.type,
               amount: e.amount,
@@ -133,8 +223,8 @@ export async function createTransaction(data: CreateTransactionInput) {
         include: { entries: true },
       });
 
-      // 7. Update cached balances atomically
-      for (const entry of data.entries) {
+      // 9. Update cached balances atomically
+      for (const entry of finalEntries) {
         if (entry.type === 'DEBIT') {
           await tx.$queryRaw`
             UPDATE "Account"
@@ -152,7 +242,7 @@ export async function createTransaction(data: CreateTransactionInput) {
         }
       }
 
-      // 8. Audit log
+      // 10. Audit log
       await tx.auditLog.create({
         data: {
           userId: data.createdById,
@@ -162,7 +252,8 @@ export async function createTransaction(data: CreateTransactionInput) {
           details: {
             code: transaction.code,
             type: transaction.type,
-            entriesCount: data.entries.length,
+            entriesCount: finalEntries.length,
+            sociedadId: data.sociedadId ?? null,
           },
         },
       });
@@ -340,10 +431,11 @@ export async function getById(id: string) {
   const transaction = await prisma.transaction.findUnique({
     where: { id },
     include: {
-      entries: true,
+      entries: { include: { account: true } },
       period: true,
+      sociedad: { select: { id: true, name: true } },
       createdBy: {
-        select: { id: true, name: true, email: true, role: true },
+        select: { id: true, name: true, username: true, role: true },
       },
     },
   });
@@ -380,7 +472,10 @@ export async function list(filters: ListFilters = {}) {
 
   return prisma.transaction.findMany({
     where,
-    include: { entries: true },
+    include: {
+      entries: { include: { account: true } },
+      sociedad: { select: { id: true, name: true } },
+    },
     orderBy: { createdAt: 'desc' },
   });
 }
@@ -390,7 +485,10 @@ export async function list(filters: ListFilters = {}) {
 export async function getByPeriod(periodId: string) {
   return prisma.transaction.findMany({
     where: { periodId },
-    include: { entries: true },
+    include: {
+      entries: { include: { account: true } },
+      sociedad: { select: { id: true, name: true } },
+    },
     orderBy: { createdAt: 'desc' },
   });
 }

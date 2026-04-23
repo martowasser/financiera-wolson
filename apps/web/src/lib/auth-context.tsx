@@ -5,7 +5,7 @@ import { apiFetch, setAccessToken, setRefreshToken, getAccessToken } from './api
 
 type User = {
   id: string;
-  email: string;
+  username: string;
   name: string;
   role: 'ADMIN' | 'OPERATOR' | 'VIEWER';
   isActive: boolean;
@@ -14,7 +14,7 @@ type User = {
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (username: string, password: string) => Promise<User>;
   logout: () => void;
 };
 
@@ -47,10 +47,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<User> => {
+  const login = useCallback(async (username: string, password: string): Promise<User> => {
     const data = await apiFetch<{ user: User; accessToken: string; refreshToken: string }>(
       '/auth/login',
-      { method: 'POST', body: { email, password } },
+      { method: 'POST', body: { username, password } },
     );
     setAccessToken(data.accessToken);
     setRefreshToken(data.refreshToken);

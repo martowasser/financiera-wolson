@@ -148,7 +148,7 @@ export default function AccountsPage() {
             />
             <Select value={filterType} onValueChange={(v) => setFilterType(v ?? "")}>
               <SelectTrigger className="w-36">
-                <SelectValue placeholder="Tipo" />
+                <SelectValue placeholder="Tipo" labels={{ all: 'Todos', ...typeLabels }} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
@@ -351,7 +351,7 @@ function AccountFormDialog({
               <div className="space-y-1">
                 <Label>Tipo</Label>
                 <Select value={type} onValueChange={(v) => setType(v ?? "")}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue labels={typeLabels} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="CASH">Efectivo</SelectItem>
                     <SelectItem value="BANK">Banco</SelectItem>
@@ -376,7 +376,7 @@ function AccountFormDialog({
               <div className="space-y-1">
                 <Label>Saldo Normal</Label>
                 <Select value={normalBalance} onValueChange={(v) => setNormalBalance(v ?? "")}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue labels={{ DEBIT: 'Debito', CREDIT: 'Credito' }} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="DEBIT">Debito</SelectItem>
                     <SelectItem value="CREDIT">Credito</SelectItem>

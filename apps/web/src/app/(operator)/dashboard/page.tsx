@@ -17,6 +17,7 @@ import {
   TrendingUp,
   TrendingDown,
 } from 'lucide-react';
+import { transactionTypeLabels, label } from '@/lib/labels';
 
 type Period = { id: string; date: string; status: string };
 type Account = {
@@ -36,7 +37,7 @@ type Transaction = {
   type: string;
   status: string;
   createdAt: string;
-  entries: { amount: number; type: string; account: { currency: string } }[];
+  entries: { amount: number; type: string; accountId: string; account: { id: string; currency: string; type: string } }[];
 };
 type LeaseStatus = {
   leaseId: string;
@@ -66,6 +67,18 @@ export default function DashboardPage() {
 
   const cashARS = accounts?.find((a) => a.currency === 'ARS' && a.type === 'CASH');
   const cashUSD = accounts?.find((a) => a.currency === 'USD' && a.type === 'CASH');
+
+  // Arrastre: saldo al cierre del día anterior = saldo actual − delta neto del día para efectivo.
+  function todayNetForAccount(accountId: string | undefined): number {
+    if (!accountId) return 0;
+    return (transactions || [])
+      .filter((t) => t.status === 'CONFIRMED')
+      .flatMap((t) => t.entries || [])
+      .filter((e) => e.accountId === accountId)
+      .reduce((sum, e) => sum + (e.type === 'DEBIT' ? 1 : -1) * Number(e.amount), 0);
+  }
+  const carryARS = cashARS ? getBalance(cashARS) - todayNetForAccount(cashARS.id) : 0;
+  const carryUSD = cashUSD ? getBalance(cashUSD) - todayNetForAccount(cashUSD.id) : 0;
 
   const todayTxns = transactions || [];
   const todayIncome = todayTxns
@@ -102,6 +115,33 @@ export default function DashboardPage() {
           <CalendarCheck className="mr-1 h-4 w-4" /> Cierre del Dia
         </Link>
       </div>
+
+      {/* Arrastre del día anterior */}
+      <Card className="border-l-4 border-l-primary/60">
+        <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
+          <div className="flex items-center gap-3">
+            <CalendarCheck className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Arrastre del día anterior
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Con lo que arrancó la caja de seguridad
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-6">
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Pesos</p>
+              <p className="text-lg font-semibold">{formatMoney(carryARS, 'ARS')}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Dólares</p>
+              <p className="text-lg font-semibold">{formatMoney(carryUSD, 'USD')}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Balance cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -203,7 +243,7 @@ export default function DashboardPage() {
                       <span className="truncate max-w-[200px]">{txn.description}</span>
                     </div>
                     <Badge variant="outline" className="text-xs">
-                      {txn.type}
+                      {label(transactionTypeLabels, txn.type)}
                     </Badge>
                   </Link>
                 ))}

@@ -215,7 +215,7 @@ function PropertyFormDialog({
             <div className="space-y-1">
               <Label>Tipo</Label>
               <Select value={type} onValueChange={(v) => setType(v ?? "")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue labels={typeLabels} /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(typeLabels).map(([k, v]) => (
                     <SelectItem key={k} value={k}>{v}</SelectItem>

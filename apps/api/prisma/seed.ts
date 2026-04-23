@@ -10,16 +10,16 @@ async function main() {
   const hashedPassword = await bcrypt.hash('admin123', 12);
 
   const admin = await prisma.user.create({
-    data: { email: 'admin@financiera.com', password: hashedPassword, name: 'Administrador', role: 'ADMIN' },
+    data: { username: 'admin', password: hashedPassword, name: 'Administrador', role: 'ADMIN' },
   });
   const mariana = await prisma.user.create({
-    data: { email: 'mariana@financiera.com', password: hashedPassword, name: 'Mariana', role: 'OPERATOR' },
+    data: { username: 'mariana', password: hashedPassword, name: 'Mariana', role: 'OPERATOR' },
   });
   const secretaria2 = await prisma.user.create({
-    data: { email: 'secretaria@financiera.com', password: hashedPassword, name: 'Segunda Secretaria', role: 'OPERATOR' },
+    data: { username: 'secretaria', password: hashedPassword, name: 'Segunda Secretaria', role: 'OPERATOR' },
   });
   const alberto = await prisma.user.create({
-    data: { email: 'alberto@financiera.com', password: hashedPassword, name: 'Alberto', role: 'VIEWER' },
+    data: { username: 'alberto', password: hashedPassword, name: 'Alberto', role: 'VIEWER' },
   });
 
   // --- Entities ---
@@ -139,6 +139,39 @@ async function main() {
   });
   const receivableLopez = await prisma.account.create({
     data: { entityId: inquilino2.id, name: 'Cuenta Corriente López', path: 'Receivable:Tenant:Lopez:USD', type: 'RECEIVABLE', currency: 'USD', normalBalance: 'DEBIT' },
+  });
+
+  // Cuentas corrientes de socios (OWNER_CURRENT) — una por (socio, moneda)
+  const ccAlbertoARS = await prisma.account.create({
+    data: { entityId: albertoEntity.id, name: 'CC Alberto ARS', path: 'OwnerCurrent:Alberto:ARS', type: 'OWNER_CURRENT', currency: 'ARS', normalBalance: 'DEBIT' },
+  });
+  const ccAlbertoUSD = await prisma.account.create({
+    data: { entityId: albertoEntity.id, name: 'CC Alberto USD', path: 'OwnerCurrent:Alberto:USD', type: 'OWNER_CURRENT', currency: 'USD', normalBalance: 'DEBIT' },
+  });
+  const ccJ27ARS = await prisma.account.create({
+    data: { entityId: socioJ27.id, name: 'CC J27 ARS', path: 'OwnerCurrent:J27:ARS', type: 'OWNER_CURRENT', currency: 'ARS', normalBalance: 'DEBIT' },
+  });
+  const ccN23ARS = await prisma.account.create({
+    data: { entityId: socioN23.id, name: 'CC N23 ARS', path: 'OwnerCurrent:N23:ARS', type: 'OWNER_CURRENT', currency: 'ARS', normalBalance: 'DEBIT' },
+  });
+
+  // Sociedad members: cuentas asociadas a cada sociedad con su % (bps)
+  // DA S.A. — Alberto 50% / J27 50% + banco propio al 0%
+  await prisma.sociedadMember.createMany({
+    data: [
+      { sociedadId: sociedadDA.id, accountId: ccAlbertoARS.id, percentBps: 5000 },
+      { sociedadId: sociedadDA.id, accountId: ccJ27ARS.id, percentBps: 5000 },
+      { sociedadId: sociedadDA.id, accountId: daBank.id, percentBps: 0 },
+    ],
+  });
+  // MR Inversiones — Alberto 40% / J27 35% / N23 25% + banco propio al 0%
+  await prisma.sociedadMember.createMany({
+    data: [
+      { sociedadId: sociedadMR.id, accountId: ccAlbertoARS.id, percentBps: 4000 },
+      { sociedadId: sociedadMR.id, accountId: ccJ27ARS.id, percentBps: 3500 },
+      { sociedadId: sociedadMR.id, accountId: ccN23ARS.id, percentBps: 2500 },
+      { sociedadId: sociedadMR.id, accountId: mrBank.id, percentBps: 0 },
+    ],
   });
 
   // --- Properties ---
@@ -289,11 +322,148 @@ async function main() {
   await prisma.account.update({ where: { id: expenseBankFees.id }, data: { debitsPosted: 250000n } });
   await prisma.account.update({ where: { id: bancoCredicoop.id }, data: { creditsPosted: 250000n } });
 
+  // --- Demo enrichment (for fuzzy search palette demo) ---
+  // WARNING: This data is for demo only and will not exist in production.
+  const demoEntityData: { name: string; type: 'PERSON' | 'COMPANY' | 'THIRD_PARTY'; taxId: string }[] = [
+    { name: 'Gonzalez María Elena', type: 'PERSON', taxId: '27-12345001-1' },
+    { name: 'Gonzalez Roberto', type: 'PERSON', taxId: '20-12345002-2' },
+    { name: 'Rodríguez Hnos S.R.L.', type: 'COMPANY', taxId: '30-12345003-3' },
+    { name: 'Rodríguez Patricia', type: 'PERSON', taxId: '27-12345004-4' },
+    { name: 'Fernández Carlos Alberto', type: 'PERSON', taxId: '20-12345005-5' },
+    { name: 'Fernández Silvana', type: 'PERSON', taxId: '27-12345006-6' },
+    { name: 'López Ana María', type: 'PERSON', taxId: '27-12345007-7' },
+    { name: 'López Diego', type: 'PERSON', taxId: '20-12345008-8' },
+    { name: 'Martínez Laura', type: 'PERSON', taxId: '27-12345009-9' },
+    { name: 'Martínez Sebastián', type: 'PERSON', taxId: '20-12345010-0' },
+    { name: 'Sánchez Pablo', type: 'PERSON', taxId: '20-12345011-1' },
+    { name: 'Sánchez Carolina', type: 'PERSON', taxId: '27-12345012-2' },
+    { name: 'Pérez Mónica', type: 'PERSON', taxId: '27-12345013-3' },
+    { name: 'Pérez Gustavo', type: 'PERSON', taxId: '20-12345014-4' },
+    { name: 'Gómez Andrea', type: 'PERSON', taxId: '27-12345015-5' },
+    { name: 'Gómez Ricardo', type: 'PERSON', taxId: '20-12345016-6' },
+    { name: 'Díaz Verónica', type: 'PERSON', taxId: '27-12345017-7' },
+    { name: 'Díaz Fernando', type: 'PERSON', taxId: '20-12345018-8' },
+    { name: 'Romero Lucía', type: 'PERSON', taxId: '27-12345019-9' },
+    { name: 'Romero Martín', type: 'PERSON', taxId: '20-12345020-0' },
+    { name: 'Álvarez Benítez S.A.', type: 'COMPANY', taxId: '30-12345021-1' },
+    { name: 'Inversiones Belgrano S.A.', type: 'COMPANY', taxId: '30-12345022-2' },
+    { name: 'Fideicomiso Palermo Norte', type: 'COMPANY', taxId: '30-12345023-3' },
+    { name: 'Inmobiliaria Recoleta S.R.L.', type: 'COMPANY', taxId: '30-12345024-4' },
+    { name: 'Grupo Villa Urquiza', type: 'COMPANY', taxId: '30-12345025-5' },
+    { name: 'Constructora Caballito S.A.', type: 'COMPANY', taxId: '30-12345026-6' },
+    { name: 'Administración San Telmo', type: 'THIRD_PARTY', taxId: '30-12345027-7' },
+    { name: 'Administración Núñez', type: 'THIRD_PARTY', taxId: '30-12345028-8' },
+    // NOTE: Companies below are kept as COMPANY without SociedadMember entries on purpose —
+    // they represent businesses in the system that are NOT partnerships/sociedades (tenants,
+    // suppliers, etc.). The `/entities?onlySociedades=true` filter keeps them out of the
+    // "Nuevo Movimiento → Sociedad" dropdown.
+    { name: 'Acosta Cristina', type: 'PERSON', taxId: '27-12345029-9' },
+    { name: 'Ruiz Sergio Daniel', type: 'PERSON', taxId: '20-12345030-0' },
+    { name: 'Silva Patricia Mariel', type: 'PERSON', taxId: '27-12345031-1' },
+    { name: 'Herrera Juan Pablo', type: 'PERSON', taxId: '20-12345032-2' },
+    { name: 'Castro Verónica', type: 'PERSON', taxId: '27-12345033-3' },
+    { name: 'Ortiz Hernán', type: 'PERSON', taxId: '20-12345034-4' },
+    { name: 'Núñez Florencia', type: 'PERSON', taxId: '27-12345035-5' },
+    { name: 'Morales Walter', type: 'PERSON', taxId: '20-12345036-6' },
+    { name: 'Kowalski Hnos S.R.L.', type: 'COMPANY', taxId: '30-12345037-7' },
+    { name: 'Almada Jorge Oscar', type: 'PERSON', taxId: '20-12345038-8' },
+    { name: 'Distribuidora Olivos S.A.', type: 'COMPANY', taxId: '30-12345039-9' },
+    { name: 'Servicios Colegiales S.R.L.', type: 'COMPANY', taxId: '30-12345040-0' },
+  ];
+  await prisma.entity.createMany({ data: demoEntityData });
+  console.log(`Demo entities created: ${demoEntityData.length}`);
+
+  // Create past periods (monthly) for richer transaction history
+  const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const pastPeriods: { id: string; monthIdx: number; year: number }[] = [];
+  for (let back = 1; back <= 5; back++) {
+    const d = new Date(today);
+    d.setMonth(d.getMonth() - back);
+    d.setDate(15);
+    d.setHours(0, 0, 0, 0);
+    const p = await prisma.period.create({ data: { date: d, status: 'CLOSED', closedAt: new Date() } });
+    pastPeriods.push({ id: p.id, monthIdx: d.getMonth(), year: d.getFullYear() });
+  }
+  pastPeriods.push({ id: period.id, monthIdx: today.getMonth(), year: today.getFullYear() });
+
+  // Demo transactions — varied descriptions for fuzzy-search coverage.
+  type TxnTemplate = {
+    type: 'INCOME' | 'EXPENSE' | 'BANK_FEE';
+    paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'CHECK';
+    descBuilder: (m: string) => string;
+    debitAccountId: string;
+    creditAccountId: string;
+    amountMin: bigint;
+    amountMax: bigint;
+  };
+  const templates: TxnTemplate[] = [
+    { type: 'INCOME', paymentMethod: 'CASH', descBuilder: (m) => `Cobro alquiler Local Esmeralda - ${m}`, debitAccountId: cashARS.id, creditAccountId: rentalIncomeARS.id, amountMin: 12000000n, amountMax: 18000000n },
+    { type: 'INCOME', paymentMethod: 'BANK_TRANSFER', descBuilder: (m) => `Cobro alquiler Oficina 301 - ${m}`, debitAccountId: bancoCredicoop.id, creditAccountId: rentalIncomeARS.id, amountMin: 18000000n, amountMax: 22000000n },
+    { type: 'INCOME', paymentMethod: 'CASH', descBuilder: (m) => `Cobro cochera 15 Parking Centro - ${m}`, debitAccountId: cashARS.id, creditAccountId: rentalIncomeARS.id, amountMin: 4500000n, amountMax: 5500000n },
+    { type: 'EXPENSE', paymentMethod: 'BANK_TRANSFER', descBuilder: (m) => `ABL Edificio Centro - ${m}`, debitAccountId: expenseABL.id, creditAccountId: bancoCredicoop.id, amountMin: 3000000n, amountMax: 5500000n },
+    { type: 'EXPENSE', paymentMethod: 'BANK_TRANSFER', descBuilder: (m) => `Ingresos Brutos - ${m}`, debitAccountId: expenseIIBB.id, creditAccountId: bancoProvincia.id, amountMin: 800000n, amountMax: 1500000n },
+    { type: 'EXPENSE', paymentMethod: 'BANK_TRANSFER', descBuilder: (m) => `Pago expensas Depto 4B - ${m}`, debitAccountId: daExpense.id, creditAccountId: daBank.id, amountMin: 1800000n, amountMax: 2800000n },
+    { type: 'EXPENSE', paymentMethod: 'CHECK', descBuilder: (m) => `Honorarios administración - ${m}`, debitAccountId: mrExpense.id, creditAccountId: mrBank.id, amountMin: 600000n, amountMax: 1200000n },
+    { type: 'EXPENSE', paymentMethod: 'BANK_TRANSFER', descBuilder: (m) => `Reparaciones Local Esmeralda - ${m}`, debitAccountId: daExpense.id, creditAccountId: daBank.id, amountMin: 500000n, amountMax: 3500000n },
+    { type: 'EXPENSE', paymentMethod: 'BANK_TRANSFER', descBuilder: (m) => `Seguros propiedades - ${m}`, debitAccountId: mrExpense.id, creditAccountId: mrBank.id, amountMin: 900000n, amountMax: 1400000n },
+    { type: 'EXPENSE', paymentMethod: 'CASH', descBuilder: (m) => `Servicios generales Parking Centro - ${m}`, debitAccountId: daExpense.id, creditAccountId: cashARS.id, amountMin: 200000n, amountMax: 800000n },
+    { type: 'BANK_FEE', paymentMethod: 'BANK_TRANSFER', descBuilder: (m) => `Gastos bancarios Credicoop - ${m}`, debitAccountId: expenseBankFees.id, creditAccountId: bancoCredicoop.id, amountMin: 150000n, amountMax: 400000n },
+    { type: 'BANK_FEE', paymentMethod: 'BANK_TRANSFER', descBuilder: (m) => `Gastos bancarios Provincia - ${m}`, debitAccountId: expenseBankFees.id, creditAccountId: bancoProvincia.id, amountMin: 100000n, amountMax: 300000n },
+    { type: 'INCOME', paymentMethod: 'CASH', descBuilder: (m) => `Ingreso comisión inmobiliaria - ${m}`, debitAccountId: cashARS.id, creditAccountId: rentalIncomeARS.id, amountMin: 2000000n, amountMax: 4000000n },
+  ];
+
+  const balanceDelta = new Map<string, { debit: bigint; credit: bigint }>();
+  function addDelta(accountId: string, field: 'debit' | 'credit', amount: bigint) {
+    const cur = balanceDelta.get(accountId) ?? { debit: 0n, credit: 0n };
+    cur[field] += amount;
+    balanceDelta.set(accountId, cur);
+  }
+
+  const DEMO_TXN_COUNT = 200;
+  let seqBase = 4; // existing 3 txns consumed TXN-000001..000003
+  for (let i = 0; i < DEMO_TXN_COUNT; i++) {
+    const tmpl = templates[i % templates.length];
+    const periodSlot = pastPeriods[i % pastPeriods.length];
+    const monthLabel = `${MONTH_NAMES[periodSlot.monthIdx]} ${periodSlot.year}`;
+    const range = tmpl.amountMax - tmpl.amountMin;
+    // Deterministic amount so seeds are reproducible.
+    const amount = tmpl.amountMin + (BigInt(i) * 13n) % (range + 1n);
+    const code = `TXN-${String(seqBase + i).padStart(6, '0')}`;
+    await prisma.transaction.create({
+      data: {
+        periodId: periodSlot.id,
+        code,
+        description: tmpl.descBuilder(monthLabel),
+        type: tmpl.type,
+        paymentMethod: tmpl.paymentMethod,
+        createdById: mariana.id,
+        entries: {
+          create: [
+            { accountId: tmpl.debitAccountId, type: 'DEBIT', amount, description: tmpl.descBuilder(monthLabel) },
+            { accountId: tmpl.creditAccountId, type: 'CREDIT', amount, description: tmpl.descBuilder(monthLabel) },
+          ],
+        },
+      },
+    });
+    addDelta(tmpl.debitAccountId, 'debit', amount);
+    addDelta(tmpl.creditAccountId, 'credit', amount);
+  }
+
+  for (const [accountId, delta] of balanceDelta) {
+    await prisma.account.update({
+      where: { id: accountId },
+      data: {
+        debitsPosted: { increment: delta.debit },
+        creditsPosted: { increment: delta.credit },
+      },
+    });
+  }
+
   console.log('Seed completed successfully!');
   console.log(`Users: admin, mariana, secretaria, alberto (password: admin123)`);
-  console.log(`Entities: ${financiera.name}, ${sociedadDA.name}, ${sociedadMR.name}, and more`);
+  console.log(`Entities: ${financiera.name}, ${sociedadDA.name}, ${sociedadMR.name}, and ${demoEntityData.length} demo entities`);
   console.log(`Properties: 4 properties with 4 active leases`);
-  console.log(`Transactions: 3 sample transactions for today`);
+  console.log(`Transactions: 3 base + ${DEMO_TXN_COUNT} demo across ${pastPeriods.length} periods`);
 }
 
 main()

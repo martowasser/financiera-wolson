@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Combobox, type ComboboxOption } from '@/components/combobox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { settlementStatusLabels } from '@/lib/labels';
 import {
   Dialog,
   DialogContent,
@@ -115,7 +116,7 @@ export default function SettlementsPage() {
 
       <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v ?? "")}>
         <SelectTrigger className="w-36">
-          <SelectValue placeholder="Estado" />
+          <SelectValue placeholder="Estado" labels={{ all: 'Todos', ...settlementStatusLabels }} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todos</SelectItem>

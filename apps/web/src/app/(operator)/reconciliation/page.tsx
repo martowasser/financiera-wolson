@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Combobox, type ComboboxOption } from '@/components/combobox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { transactionTypeLabels, label } from '@/lib/labels';
 import {
   Dialog,
   DialogContent,
@@ -347,7 +348,7 @@ function ReconciliationDetail({ id, onBack }: { id: string; onBack: () => void }
                         <Badge variant="outline" className="text-xs shrink-0">{txn.code}</Badge>
                         <span className="truncate">{txn.description}</span>
                       </div>
-                      <Badge variant="outline" className="text-xs shrink-0">{txn.type}</Badge>
+                      <Badge variant="outline" className="text-xs shrink-0">{label(transactionTypeLabels, txn.type)}</Badge>
                     </div>
                   ))}
                 </div>

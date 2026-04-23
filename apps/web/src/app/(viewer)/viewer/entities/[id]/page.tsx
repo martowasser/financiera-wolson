@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery } from '@/lib/hooks';
 import { formatMoney } from '@/lib/format';
 import { ArrowLeft } from 'lucide-react';
+import { accountTypeLabels, label } from '@/lib/labels';
 
 type Entity = {
   id: string;
@@ -175,7 +176,7 @@ export default function ViewerEntityDetailPage({ params }: { params: Promise<{ i
                             <div className="text-xs text-muted-foreground">{a.path}</div>
                           </td>
                           <td className="px-4 py-2">
-                            <Badge variant="outline">{a.type}</Badge>
+                            <Badge variant="outline">{label(accountTypeLabels, a.type)}</Badge>
                           </td>
                           <td className="px-4 py-2 text-right font-mono">
                             {formatMoney(a.debitsPosted, currency)}

@@ -13,20 +13,20 @@ function excludePassword<T extends { password: string }>(user: T) {
   return rest;
 }
 
-export async function login(email: string, password: string) {
-  const user = await prisma.user.findUnique({ where: { email } });
+export async function login(username: string, password: string) {
+  const user = await prisma.user.findUnique({ where: { username } });
   if (!user || !user.isActive) {
-    throw unauthorized('Invalid email or password');
+    throw unauthorized('Invalid username or password');
   }
 
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) {
-    throw unauthorized('Invalid email or password');
+    throw unauthorized('Invalid username or password');
   }
 
   const jwtPayload: JwtPayload = {
     userId: user.id,
-    email: user.email,
+    username: user.username,
     role: user.role,
   };
 
@@ -51,17 +51,17 @@ export async function login(email: string, password: string) {
   };
 }
 
-export async function register(email: string, password: string, name: string, role: UserRole) {
-  const existing = await prisma.user.findUnique({ where: { email } });
+export async function register(username: string, password: string, name: string, role: UserRole) {
+  const existing = await prisma.user.findUnique({ where: { username } });
   if (existing) {
-    throw conflict('A user with this email already exists');
+    throw conflict('A user with this username already exists');
   }
 
   const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
   const user = await prisma.user.create({
     data: {
-      email,
+      username,
       password: hashedPassword,
       name,
       role,
@@ -96,7 +96,7 @@ export async function refresh(refreshTokenStr: string) {
   // Create new tokens
   const jwtPayload: JwtPayload = {
     userId: storedToken.user.id,
-    email: storedToken.user.email,
+    username: storedToken.user.username,
     role: storedToken.user.role,
   };
 

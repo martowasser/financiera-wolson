@@ -18,9 +18,10 @@ const createTransactionSchema = z.object({
   checkNumber: z.string().nullish(),
   bankReference: z.string().nullish(),
   invoiceId: z.string().nullish(),
+  sociedadId: z.string().nullish(),
   notes: z.string().nullish(),
   idempotencyKey: z.string().nullish(),
-  entries: z.array(entrySchema).min(2),
+  entries: z.array(entrySchema).min(1),
 });
 
 const reverseTransactionSchema = z.object({
@@ -70,6 +71,7 @@ export default async function ledgerRoutes(fastify: FastifyInstance) {
       checkNumber: body.checkNumber,
       bankReference: body.bankReference,
       invoiceId: body.invoiceId,
+      sociedadId: body.sociedadId,
       notes: body.notes,
       idempotencyKey: body.idempotencyKey,
       entries,

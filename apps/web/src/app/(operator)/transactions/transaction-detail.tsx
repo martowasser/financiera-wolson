@@ -8,6 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, RotateCcw } from 'lucide-react';
+import {
+  transactionTypeLabels,
+  transactionStatusLabels,
+  paymentMethodLabels,
+  label,
+} from '@/lib/labels';
 
 type Entry = {
   id: string;
@@ -26,6 +32,8 @@ type Transaction = {
   paymentMethod: string | null;
   checkNumber: string | null;
   bankReference: string | null;
+  sociedadId: string | null;
+  sociedad?: { id: string; name: string } | null;
   notes: string | null;
   createdAt: string;
   entries: Entry[];
@@ -82,18 +90,24 @@ export function TransactionDetail({ id, onBack, onReverse }: Props) {
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tipo</span>
-              <Badge variant="outline">{txn.type}</Badge>
+              <Badge variant="outline">{label(transactionTypeLabels, txn.type)}</Badge>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Estado</span>
               <Badge variant={txn.status === 'REVERSED' ? 'destructive' : 'default'}>
-                {txn.status}
+                {label(transactionStatusLabels, txn.status)}
               </Badge>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Medio de Pago</span>
-              <span>{txn.paymentMethod || 'N/A'}</span>
+              <span>{txn.paymentMethod ? label(paymentMethodLabels, txn.paymentMethod) : 'N/A'}</span>
             </div>
+            {txn.sociedad && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Sociedad</span>
+                <span>{txn.sociedad.name}</span>
+              </div>
+            )}
             {txn.checkNumber && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Cheque</span>

@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useCallback, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useQuery } from '@/lib/hooks';
+import { useKeyboardShortcuts } from '@/lib/shortcuts/use-keyboard-shortcuts';
+import type { Shortcut } from '@/lib/shortcuts/types';
 import { apiFetch } from '@/lib/api';
 import { PageHeader } from '@/components/page-header';
 import { DataTable, type Column } from '@/components/data-table';
@@ -45,10 +48,44 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function EntitiesPage() {
+  const searchParams = useSearchParams();
+  const showNew = searchParams.get('new') === '1';
+  const urlDetailId = searchParams.get('id');
   const [search, setSearch] = useState('');
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(showNew);
   const [editing, setEditing] = useState<Entity | null>(null);
-  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(urlDetailId);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setDetailId(urlDetailId);
+  }, [urlDetailId]);
+
+  const shortcuts = useMemo<Shortcut[]>(
+    () => [
+      {
+        id: 'entity-create',
+        keys: ['c'],
+        label: 'Nueva sociedad',
+        group: 'Sociedades',
+        when: () => !detailId && !showForm,
+        run: () => {
+          setEditing(null);
+          setShowForm(true);
+        },
+      },
+      {
+        id: 'entity-focus-search',
+        keys: ['/'],
+        label: 'Buscar',
+        group: 'Sociedades',
+        when: () => !detailId,
+        run: () => searchInputRef.current?.focus(),
+      },
+    ],
+    [detailId, showForm],
+  );
+  useKeyboardShortcuts(shortcuts);
 
   const { data: entities, isLoading, refetch } = useQuery<Entity[]>('/entities', {
     search: search || undefined,
@@ -104,6 +141,7 @@ export default function EntitiesPage() {
       />
 
       <Input
+        ref={searchInputRef}
         placeholder="Buscar..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -194,7 +232,7 @@ function EntityFormDialog({
             <div className="space-y-1">
               <Label>Tipo</Label>
               <Select value={type} onValueChange={(v) => setType(v ?? "")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue labels={typeLabels} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="COMPANY">Sociedad</SelectItem>
                   <SelectItem value="PERSON">Persona</SelectItem>

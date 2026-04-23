@@ -22,6 +22,7 @@ const listQuerySchema = z.object({
   type: z.enum(['COMPANY', 'PERSON', 'FIRM', 'THIRD_PARTY']).optional(),
   search: z.string().optional(),
   isActive: z.coerce.boolean().optional(),
+  onlySociedades: z.coerce.boolean().optional(),
 });
 
 export default async function entityRoutes(fastify: FastifyInstance) {

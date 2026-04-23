@@ -6,6 +6,7 @@ interface ListFilters {
   type?: EntityType;
   search?: string;
   isActive?: boolean;
+  onlySociedades?: boolean;
 }
 
 export async function list(filters?: ListFilters) {
@@ -23,6 +24,20 @@ export async function list(filters?: ListFilters) {
 
   if (filters?.search) {
     where.name = { contains: filters.search, mode: 'insensitive' };
+  }
+
+  if (filters?.onlySociedades) {
+    // A valid sociedad is a COMPANY whose SociedadMember entries with percentBps > 0 sum to 10000 (100%).
+    const memberSums = await prisma.sociedadMember.groupBy({
+      by: ['sociedadId'],
+      where: { percentBps: { gt: 0 } },
+      _sum: { percentBps: true },
+    });
+    const validSociedadIds = memberSums
+      .filter((m) => m._sum.percentBps === 10000)
+      .map((m) => m.sociedadId);
+    where.type = 'COMPANY';
+    where.id = { in: validSociedadIds };
   }
 
   const entities = await prisma.entity.findMany({

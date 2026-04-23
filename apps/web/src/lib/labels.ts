@@ -78,7 +78,23 @@ export const userRoleLabels: Record<string, string> = {
   VIEWER: 'Visualizador',
 };
 
+export const periodStatusLabels: Record<string, string> = {
+  OPEN: 'Abierto',
+  CLOSED: 'Cerrado',
+};
+
+export const leaseManagedByLabels: Record<string, string> = {
+  DIRECT: 'Directo',
+  THIRD_PARTY: 'Rendido por tercero',
+};
+
+export const normalBalanceLabels: Record<string, string> = {
+  DEBIT: 'Debito',
+  CREDIT: 'Credito',
+};
+
 /** Generic label lookup — returns the Spanish label or the raw value as fallback. */
-export function label(map: Record<string, string>, value: string): string {
+export function label(map: Record<string, string>, value: string | null | undefined, fallback = '-'): string {
+  if (value == null) return fallback;
   return map[value] ?? value;
 }

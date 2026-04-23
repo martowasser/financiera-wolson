@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,10 +21,10 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const user = await login(email, password);
+      const user = await login(username, password);
       router.push(user.role === 'VIEWER' ? '/viewer/dashboard' : '/dashboard');
     } catch {
-      setError('Email o contraseña incorrectos');
+      setError('Usuario o contraseña incorrectos');
     } finally {
       setLoading(false);
     }
@@ -43,16 +43,16 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Usuario</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="mariana@financiera.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="mariana"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 autoFocus
-                autoComplete="email"
+                autoComplete="username"
               />
             </div>
             <div className="space-y-2">

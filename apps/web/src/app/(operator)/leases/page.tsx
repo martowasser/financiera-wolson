@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Combobox, type ComboboxOption } from '@/components/combobox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { leaseManagedByLabels } from '@/lib/labels';
 import {
   Dialog,
   DialogContent,
@@ -307,7 +308,7 @@ function LeaseFormDialog({
             <div className="space-y-1">
               <Label>Tipo de Gestion</Label>
               <Select value={managedBy} onValueChange={(v) => setManagedBy(v ?? "")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue labels={leaseManagedByLabels} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="DIRECT">Directo</SelectItem>
                   <SelectItem value="THIRD_PARTY">Rendido por Tercero</SelectItem>

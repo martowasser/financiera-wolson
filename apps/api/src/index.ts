@@ -16,6 +16,7 @@ import invoiceRoutes from './modules/invoice/routes.js';
 import settlementRoutes from './modules/settlement/routes.js';
 import reconciliationRoutes from './modules/reconciliation/routes.js';
 import reportRoutes from './modules/reporting/routes.js';
+import sociedadMemberRoutes from './modules/sociedad-member/routes.js';
 
 const server = Fastify({
   logger: true,
@@ -70,6 +71,7 @@ await server.register(invoiceRoutes, { prefix: '/api/invoices' });
 await server.register(settlementRoutes, { prefix: '/api/settlements' });
 await server.register(reconciliationRoutes, { prefix: '/api/reconciliations' });
 await server.register(reportRoutes, { prefix: '/api/reports' });
+await server.register(sociedadMemberRoutes, { prefix: '/api/sociedad-members' });
 
 // Global error handler
 server.setErrorHandler(errorHandler);

@@ -10,6 +10,7 @@ model Transaction {
   checkNumber    String?
   bankReference  String?
   invoiceId      String?
+  sociedadId     String?
   notes          String?
   idempotencyKey String?           @unique
   createdById    String
@@ -23,12 +24,14 @@ model Transaction {
   createdBy    User         @relation("TransactionCreatedBy", fields: [createdById], references: [id])
   reversedBy   User?        @relation("TransactionReversedBy", fields: [reversedById], references: [id])
   invoice      Invoice?     @relation(fields: [invoiceId], references: [id])
+  sociedad     Entity?      @relation("SociedadTransactions", fields: [sociedadId], references: [id])
   entries      Entry[]
 
   @@index([periodId])
   @@index([type])
   @@index([status])
   @@index([invoiceId])
+  @@index([sociedadId])
   @@index([createdAt])
 }
 

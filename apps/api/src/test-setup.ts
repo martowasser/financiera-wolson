@@ -40,6 +40,7 @@ beforeEach(async () => {
     prisma.lease.deleteMany(),
     prisma.property.deleteMany(),
     prisma.ownership.deleteMany(),
+    prisma.sociedadMember.deleteMany(),
     prisma.account.deleteMany(),
     prisma.period.deleteMany(),
     prisma.entity.deleteMany(),

@@ -15,9 +15,10 @@ model Account {
   updatedAt      DateTime    @updatedAt
   deletedAt      DateTime?
 
-  entity          Entity                @relation(fields: [entityId], references: [id])
-  entries         Entry[]
-  reconciliations BankReconciliation[]
+  entity              Entity                @relation(fields: [entityId], references: [id])
+  entries             Entry[]
+  reconciliations     BankReconciliation[]
+  sociedadMemberships SociedadMember[]
 
   @@index([entityId])
   @@index([type, currency])
@@ -32,6 +33,7 @@ enum AccountType {
   EQUITY
   REVENUE
   EXPENSE
+  OWNER_CURRENT
 }
 
 enum Currency {

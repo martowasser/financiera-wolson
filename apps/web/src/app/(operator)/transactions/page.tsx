@@ -1,8 +1,17 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation } from '@/lib/hooks';
+import { useKeyboardShortcuts } from '@/lib/shortcuts/use-keyboard-shortcuts';
+import type { Shortcut } from '@/lib/shortcuts/types';
+import {
+  transactionTypeLabels,
+  transactionStatusLabels,
+  paymentMethodLabels,
+  periodStatusLabels,
+  label,
+} from '@/lib/labels';
 import { formatMoney, formatDateTime } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -51,6 +60,7 @@ export default function TransactionsPage() {
   const [filterType, setFilterType] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [search, setSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { data: period } = useQuery<Period>('/periods/today');
   const { data: transactions, isLoading, refetch } = useQuery<Transaction[]>('/transactions', {
@@ -70,6 +80,30 @@ export default function TransactionsPage() {
     refetch();
   }, [refetch]);
 
+  const canCreate = period?.status !== 'CLOSED';
+  const shortcuts = useMemo<Shortcut[]>(
+    () => [
+      {
+        id: 'txn-create',
+        keys: ['c'],
+        label: 'Nuevo movimiento',
+        group: 'Movimientos',
+        when: () => canCreate && !showForm && !selectedTxn,
+        run: () => setShowForm(true),
+      },
+      {
+        id: 'txn-focus-search',
+        keys: ['/'],
+        label: 'Buscar',
+        group: 'Movimientos',
+        when: () => !selectedTxn,
+        run: () => searchInputRef.current?.focus(),
+      },
+    ],
+    [canCreate, showForm, selectedTxn],
+  );
+  useKeyboardShortcuts(shortcuts);
+
   const columns: Column<Transaction>[] = [
     { header: 'Codigo', accessor: (row) => (
       <Badge variant={row.status === 'REVERSED' ? 'destructive' : 'secondary'} className="font-mono text-xs">
@@ -78,14 +112,14 @@ export default function TransactionsPage() {
     ), className: 'w-28' },
     { header: 'Descripcion', accessor: 'description' },
     { header: 'Tipo', accessor: (row) => (
-      <Badge variant="outline" className="text-xs">{row.type}</Badge>
+      <Badge variant="outline" className="text-xs">{label(transactionTypeLabels, row.type)}</Badge>
     ), className: 'w-24' },
     { header: 'Monto', accessor: (row) => {
       const debitEntry = row.entries?.find((e) => e.type === 'DEBIT');
       if (!debitEntry) return '-';
       return formatMoney(debitEntry.amount, debitEntry.account.currency);
     }, className: 'w-32 text-right' },
-    { header: 'Medio', accessor: (row) => row.paymentMethod || '-', className: 'w-28' },
+    { header: 'Medio', accessor: (row) => label(paymentMethodLabels, row.paymentMethod), className: 'w-28' },
     { header: 'Fecha', accessor: (row) => formatDateTime(row.createdAt), className: 'w-36' },
     { header: '', accessor: (row) => (
       row.status === 'CONFIRMED' ? (
@@ -115,7 +149,7 @@ export default function TransactionsPage() {
     <>
       <PageHeader
         title="Movimientos"
-        description={period ? `Dia: ${new Date(period.date).toLocaleDateString('es-AR')} — ${period.status}` : ''}
+        description={period ? `Dia: ${new Date(period.date).toLocaleDateString('es-AR')} — ${label(periodStatusLabels, period.status)}` : ''}
         actions={
           <Button onClick={() => setShowForm(true)} disabled={period?.status === 'CLOSED'}>
             <Plus className="mr-1 h-4 w-4" /> Nuevo Movimiento
@@ -134,6 +168,7 @@ export default function TransactionsPage() {
       {/* Filters */}
       <div className="flex gap-2 flex-wrap">
         <Input
+          ref={searchInputRef}
           placeholder="Buscar..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -141,7 +176,7 @@ export default function TransactionsPage() {
         />
         <Select value={filterType} onValueChange={(v) => setFilterType(v ?? '')}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Tipo" />
+            <SelectValue placeholder="Tipo" labels={{ all: 'Todos', ...transactionTypeLabels }} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
@@ -154,7 +189,7 @@ export default function TransactionsPage() {
         </Select>
         <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v ?? '')}>
           <SelectTrigger className="w-36">
-            <SelectValue placeholder="Estado" />
+            <SelectValue placeholder="Estado" labels={{ all: 'Todos', ...transactionStatusLabels }} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>

@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useQuery } from '@/lib/hooks';
+import { useKeyboardShortcuts } from '@/lib/shortcuts/use-keyboard-shortcuts';
+import type { Shortcut } from '@/lib/shortcuts/types';
 import { apiFetch } from '@/lib/api';
 import { formatMoney, formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
@@ -109,6 +111,21 @@ export default function PeriodPage() {
   const txnCount = periodTxns?.length ?? 0;
   const confirmedTxns = periodTxns?.filter((t) => t.status === 'CONFIRMED').length ?? 0;
   const reversedTxns = periodTxns?.filter((t) => t.status === 'REVERSED').length ?? 0;
+
+  const shortcuts = useMemo<Shortcut[]>(
+    () => [
+      {
+        id: 'period-close',
+        keys: ['c'],
+        label: 'Cerrar periodo',
+        group: 'Cierre de Caja',
+        when: () => !isClosed && !!current && !showCloseDialog,
+        run: () => setShowCloseDialog(true),
+      },
+    ],
+    [isClosed, current, showCloseDialog],
+  );
+  useKeyboardShortcuts(shortcuts);
 
   return (
     <>

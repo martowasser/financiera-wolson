@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useQuery } from '@/lib/hooks';
 import { formatMoney, formatDate } from '@/lib/format';
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { transactionTypeLabels, label } from '@/lib/labels';
 
 type Period = {
   id: string;
@@ -211,7 +212,7 @@ export default function IncomeExpensesPage() {
                   {movements.summary.map((s) => (
                     <tr key={s.type} className="border-b last:border-0">
                       <td className="px-4 py-2">
-                        <Badge variant="outline">{s.type}</Badge>
+                        <Badge variant="outline">{label(transactionTypeLabels, s.type)}</Badge>
                       </td>
                       <td className="px-4 py-2 text-right">{s.count}</td>
                       <td className="px-4 py-2 text-right font-mono">{formatMoney(s.totalAmount)}</td>
@@ -260,7 +261,7 @@ export default function IncomeExpensesPage() {
                         <td className="px-4 py-2 font-mono text-muted-foreground">{txn.code}</td>
                         <td className="px-4 py-2">{txn.description}</td>
                         <td className="px-4 py-2">
-                          <Badge variant="outline">{txn.type}</Badge>
+                          <Badge variant="outline">{label(transactionTypeLabels, txn.type)}</Badge>
                         </td>
                         <td className="px-4 py-2 text-muted-foreground">
                           {txn.paymentMethod === 'CASH'

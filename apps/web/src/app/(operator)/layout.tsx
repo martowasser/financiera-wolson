@@ -6,6 +6,9 @@ import { useAuth } from '@/lib/auth-context';
 import { AppSidebar } from '@/components/app-sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ShortcutProvider } from '@/lib/shortcuts/shortcut-context';
+import { CommandPaletteProvider } from '@/components/command-palette-provider';
+import { KeyboardShortcutsHelp } from '@/components/keyboard-shortcuts-help';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -35,14 +38,19 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
   if (!user || user.role === 'VIEWER') return null;
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <AppSidebar />
-      <main className="flex-1 overflow-auto">
-        <div className="container max-w-6xl mx-auto px-6 py-6 space-y-6">
-          {children}
+    <ShortcutProvider>
+      <CommandPaletteProvider>
+        <div className="flex h-screen overflow-hidden">
+          <AppSidebar />
+          <main className="flex-1 overflow-auto">
+            <div className="container max-w-6xl mx-auto px-6 py-6 space-y-6">
+              {children}
+            </div>
+          </main>
         </div>
-      </main>
-    </div>
+        <KeyboardShortcutsHelp />
+      </CommandPaletteProvider>
+    </ShortcutProvider>
   );
 }
 

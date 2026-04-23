@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Combobox, type ComboboxOption } from '@/components/combobox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { invoiceStatusLabels, paymentMethodLabels } from '@/lib/labels';
 import {
   Dialog,
   DialogContent,
@@ -148,7 +149,7 @@ export default function InvoicesPage() {
 
       <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v ?? "")}>
         <SelectTrigger className="w-36">
-          <SelectValue placeholder="Estado" />
+          <SelectValue placeholder="Estado" labels={{ all: 'Todos', ...invoiceStatusLabels }} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todos</SelectItem>
@@ -264,7 +265,15 @@ function InvoiceFormDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
               <div className="space-y-1">
                 <Label>Mes *</Label>
                 <Select value={periodMonth} onValueChange={(v) => setPeriodMonth(v ?? "")}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {(v: unknown) =>
+                        typeof v === 'string' && v
+                          ? new Date(2000, Number(v) - 1).toLocaleDateString('es-AR', { month: 'long' })
+                          : ''
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 12 }, (_, i) => (
                       <SelectItem key={i + 1} value={String(i + 1)}>
@@ -412,7 +421,7 @@ function CollectDialog({
             <div className="space-y-1">
               <Label>Medio de Pago</Label>
               <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v ?? "")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue labels={paymentMethodLabels} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="CASH">Efectivo</SelectItem>
                   <SelectItem value="BANK_TRANSFER">Transferencia</SelectItem>

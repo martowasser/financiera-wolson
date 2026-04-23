@@ -9,13 +9,15 @@ model Entity {
   updatedAt DateTime   @updatedAt
   deletedAt DateTime?
 
-  accounts      Account[]
-  ownerships    Ownership[] @relation("OwnedEntity")
-  ownerOf       Ownership[] @relation("OwnerEntity")
-  properties    Property[]
-  leases        Lease[]     @relation("LeaseTenant")
-  managedLeases Lease[]     @relation("LeaseThirdParty")
-  settlements   OwnerSettlement[]
+  accounts             Account[]
+  ownerships           Ownership[]       @relation("OwnedEntity")
+  ownerOf              Ownership[]       @relation("OwnerEntity")
+  properties           Property[]
+  leases               Lease[]           @relation("LeaseTenant")
+  managedLeases        Lease[]           @relation("LeaseThirdParty")
+  settlements          OwnerSettlement[]
+  sociedadMembers      SociedadMember[]  @relation("SociedadMembers")
+  sociedadTransactions Transaction[]     @relation("SociedadTransactions")
 
   @@index([type])
   @@index([name])

@@ -4,12 +4,12 @@ import * as authService from './service.js';
 import { authenticate, requireRole } from '../../lib/auth-middleware.js';
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  username: z.string().min(3),
   password: z.string().min(1),
 });
 
 const registerSchema = z.object({
-  email: z.string().email(),
+  username: z.string().min(3),
   password: z.string().min(8),
   name: z.string().min(1),
   role: z.enum(['ADMIN', 'OPERATOR', 'VIEWER']),
@@ -34,7 +34,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     },
   }, async (request, reply) => {
     const body = loginSchema.parse(request.body);
-    const result = await authService.login(body.email, body.password);
+    const result = await authService.login(body.username, body.password);
     return result;
   });
 
@@ -43,7 +43,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     preHandler: [requireRole('ADMIN')],
   }, async (request, reply) => {
     const body = registerSchema.parse(request.body);
-    const user = await authService.register(body.email, body.password, body.name, body.role);
+    const user = await authService.register(body.username, body.password, body.name, body.role);
     return reply.status(201).send(user);
   });
 
