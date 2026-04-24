@@ -1,17 +1,16 @@
 model AuditLog {
-  id         String   @id @default(cuid())
-  userId     String
-  action     String
-  entityType String
-  entityId   String
-  details    Json?
-  ipAddress  String?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  entity    String
+  entityId  String
+  action    String
+  before    Json?
+  after     Json?
+  userId    String
+  createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
 
+  @@index([entity, entityId])
   @@index([userId])
-  @@index([entityType, entityId])
-  @@index([action])
   @@index([createdAt])
 }

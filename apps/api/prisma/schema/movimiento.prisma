@@ -1,0 +1,87 @@
+// Movimiento de plata entre buckets.
+// Buckets: CAJA (efectivo global) | BANCO (de sociedad) | CUENTA_CORRIENTE (de socio/tercero).
+// Un movimiento debe tener al menos un lado (origen o destino) apuntando a un bucket.
+//
+// Semántica:
+//   - INGRESO: origenBucket=null, destinoBucket=algo
+//   - EGRESO:  origenBucket=algo, destinoBucket=null
+//   - TRANSFERENCIA: origenBucket y destinoBucket, distintos
+//
+// `numero` es incremental (secuencia arranca en 1000 en migración).
+model Movimiento {
+  id        String         @id @default(cuid())
+  numero    Int            @unique @default(autoincrement())
+  fecha     DateTime       @db.Date
+  cajaDiaId String
+  tipo      MovimientoTipo
+  monto     BigInt
+  moneda    Moneda
+
+  origenBucket   BucketTipo?
+  origenBancoId  String?
+  origenCuentaId String?
+
+  destinoBucket   BucketTipo?
+  destinoBancoId  String?
+  destinoCuentaId String?
+
+  sociedadId          String?
+  propiedadId         String?
+  contratoId          String?
+  cuentaContraparteId String?
+
+  comprobante String?
+  facturado   Boolean @default(false)
+  notes       String?
+
+  reversoDeId  String?      @unique
+  reversadoPor Movimiento?  @relation("MovimientoReverso", fields: [reversoDeId], references: [id])
+  reversos    Movimiento[]  @relation("MovimientoReverso")
+
+  createdAt   DateTime @default(now())
+  createdById String
+  createdBy   User     @relation("MovimientoCreadoPor", fields: [createdById], references: [id])
+
+  cajaDia          CajaDia    @relation(fields: [cajaDiaId], references: [id])
+  bancoOrigen      Banco?     @relation("MovimientoOrigenBanco", fields: [origenBancoId], references: [id])
+  bancoDestino     Banco?     @relation("MovimientoDestinoBanco", fields: [destinoBancoId], references: [id])
+  cuentaOrigen     Cuenta?    @relation("MovimientoOrigenCuenta", fields: [origenCuentaId], references: [id])
+  cuentaDestino    Cuenta?    @relation("MovimientoDestinoCuenta", fields: [destinoCuentaId], references: [id])
+  cuentaContraparte Cuenta?   @relation("MovimientoContraparte", fields: [cuentaContraparteId], references: [id])
+  sociedad         Sociedad?  @relation(fields: [sociedadId], references: [id])
+  propiedad        Propiedad? @relation(fields: [propiedadId], references: [id])
+  contrato         Contrato?  @relation(fields: [contratoId], references: [id])
+
+  @@index([fecha])
+  @@index([cajaDiaId])
+  @@index([sociedadId])
+  @@index([propiedadId])
+  @@index([contratoId])
+  @@index([tipo])
+  @@index([numero])
+  @@index([origenBancoId])
+  @@index([destinoBancoId])
+  @@index([origenCuentaId])
+  @@index([destinoCuentaId])
+}
+
+enum BucketTipo {
+  CAJA
+  BANCO
+  CUENTA_CORRIENTE
+}
+
+enum MovimientoTipo {
+  ALQUILER_COBRO
+  ALQUILER_PAGO
+  GASTO
+  GASTO_SOCIEDAD
+  GASTO_PROPIEDAD
+  INGRESO_VARIO
+  TRANSFERENCIA
+  COMISION_BANCARIA
+  DEBITO_AUTOMATICO
+  RECUPERO
+  AJUSTE
+  OTRO
+}

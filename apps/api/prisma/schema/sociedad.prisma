@@ -1,0 +1,34 @@
+// Sociedad: agrupación operativa. 1 banco + N socios + N propiedades.
+model Sociedad {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  notes     String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  socios      SociedadSocio[]
+  banco       Banco?
+  propiedades Propiedad[]
+  movimientos Movimiento[]
+
+  @@index([name])
+}
+
+// Suma percentBps == 10000 (100%). Usados para reparto de gastos de sociedad/banco/propiedad.
+model SociedadSocio {
+  id         String   @id @default(cuid())
+  sociedadId String
+  cuentaId   String
+  percentBps Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sociedad Sociedad @relation(fields: [sociedadId], references: [id], onDelete: Cascade)
+  cuenta   Cuenta   @relation(fields: [cuentaId], references: [id])
+
+  @@unique([sociedadId, cuentaId])
+  @@index([sociedadId])
+  @@index([cuentaId])
+}

@@ -10,28 +10,21 @@ const prisma = new PrismaClient({
 });
 
 async function seed() {
-  // Clean all tables
   await prisma.$transaction([
     prisma.auditLog.deleteMany(),
-    prisma.bankReconciliationItem.deleteMany(),
-    prisma.bankReconciliation.deleteMany(),
-    prisma.ownerSettlement.deleteMany(),
-    prisma.invoiceRetention.deleteMany(),
-    prisma.entry.deleteMany(),
-    prisma.transaction.deleteMany(),
-    prisma.invoice.deleteMany(),
-    prisma.leasePrice.deleteMany(),
-    prisma.lease.deleteMany(),
-    prisma.property.deleteMany(),
-    prisma.ownership.deleteMany(),
-    prisma.account.deleteMany(),
-    prisma.period.deleteMany(),
-    prisma.entity.deleteMany(),
+    prisma.movimiento.deleteMany(),
+    prisma.cajaDia.deleteMany(),
+    prisma.contratoSocio.deleteMany(),
+    prisma.contrato.deleteMany(),
+    prisma.propiedad.deleteMany(),
+    prisma.banco.deleteMany(),
+    prisma.sociedadSocio.deleteMany(),
+    prisma.sociedad.deleteMany(),
+    prisma.cuenta.deleteMany(),
     prisma.refreshToken.deleteMany(),
     prisma.user.deleteMany(),
   ]);
 
-  // Create admin user
   await prisma.user.create({
     data: {
       username: 'e2e-admin',
@@ -40,22 +33,6 @@ async function seed() {
       role: 'ADMIN',
       isActive: true,
     },
-  });
-
-  // Create test entity
-  const entity = await prisma.entity.create({
-    data: { name: 'E2E Test Entity', type: 'FIRM' },
-  });
-
-  // Create accounts
-  await prisma.account.createMany({
-    data: [
-      { entityId: entity.id, name: 'Caja ARS', path: 'ACTIVO:CAJA:ARS', type: 'CASH', currency: 'ARS', normalBalance: 'DEBIT' },
-      { entityId: entity.id, name: 'Banco ARS', path: 'ACTIVO:BANCO:ARS', type: 'BANK', currency: 'ARS', normalBalance: 'DEBIT', bankName: 'Banco Test' },
-      { entityId: entity.id, name: 'Ingresos ARS', path: 'INGRESO:ALQUILER:ARS', type: 'REVENUE', currency: 'ARS', normalBalance: 'CREDIT' },
-      { entityId: entity.id, name: 'Gastos ARS', path: 'GASTO:GENERAL:ARS', type: 'EXPENSE', currency: 'ARS', normalBalance: 'DEBIT' },
-      { entityId: entity.id, name: 'Cuentas a Cobrar', path: 'ACTIVO:CXC:ARS', type: 'RECEIVABLE', currency: 'ARS', normalBalance: 'DEBIT' },
-    ],
   });
 
   await prisma.$disconnect();

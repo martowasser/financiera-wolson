@@ -1,0 +1,24 @@
+// Caja del día: singleton global por fecha. Saldos iniciales = saldos finales del día anterior cerrado.
+model CajaDia {
+  id              String     @id @default(cuid())
+  fecha           DateTime   @unique @db.Date
+  status          CajaStatus @default(OPEN)
+  saldoInicialArs BigInt     @default(0)
+  saldoInicialUsd BigInt     @default(0)
+  saldoFinalArs   BigInt?
+  saldoFinalUsd   BigInt?
+  cerradoEn       DateTime?
+  cerradoPorId    String?
+  notes           String?
+
+  cerradoPor  User?        @relation("CajaCerradoPor", fields: [cerradoPorId], references: [id])
+  movimientos Movimiento[]
+
+  @@index([fecha])
+  @@index([status])
+}
+
+enum CajaStatus {
+  OPEN
+  CLOSED
+}

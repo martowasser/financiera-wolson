@@ -1,0 +1,58 @@
+// Contrato de alquiler. Pertenece a una propiedad. Tiene sus propios socios con %.
+// Al crear, socios se pre-llenan con los de la sociedad; Mariana puede editarlos.
+// `numero` es incremental (secuencia arranca en 1000 en migración).
+model Contrato {
+  id                 String         @id @default(cuid())
+  numero             Int            @unique @default(autoincrement())
+  propiedadId        String
+  inquilinoId        String
+  monto              BigInt
+  moneda             Moneda
+  fechaInicio        DateTime       @db.Date
+  fechaFin           DateTime?      @db.Date
+  status             ContratoStatus @default(ACTIVO)
+  finalizadoEn       DateTime?      @db.Date
+  motivoFinalizacion String?
+  notes              String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  deletedAt          DateTime?
+
+  propiedad   Propiedad       @relation(fields: [propiedadId], references: [id])
+  inquilino   Cuenta          @relation("ContratoInquilino", fields: [inquilinoId], references: [id])
+  socios      ContratoSocio[]
+  movimientos Movimiento[]
+
+  @@index([status])
+  @@index([fechaInicio])
+  @@index([inquilinoId])
+  @@index([propiedadId])
+  @@index([numero])
+}
+
+enum ContratoStatus {
+  ACTIVO
+  FINALIZADO
+}
+
+enum Moneda {
+  ARS
+  USD
+}
+
+// Socios del contrato con %. Suma percentBps == 10000.
+model ContratoSocio {
+  id         String   @id @default(cuid())
+  contratoId String
+  cuentaId   String
+  percentBps Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  contrato Contrato @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  cuenta   Cuenta   @relation(fields: [cuentaId], references: [id])
+
+  @@unique([contratoId, cuentaId])
+  @@index([contratoId])
+  @@index([cuentaId])
+}

@@ -1,0 +1,25 @@
+// Cuenta corriente: entidad fundamental. Representa socios, inquilinos, contrapartes.
+// Una persona física puede tener N cuentas, distinguidas por identifier + notes.
+// Saldos ARS/USD denormalizados, actualizados transaccionalmente en cada movimiento.
+model Cuenta {
+  id         String    @id @default(cuid())
+  name       String
+  identifier String?   @unique
+  notes      String?
+  saldoArs   BigInt    @default(0)
+  saldoUsd   BigInt    @default(0)
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  sociedadMemberships    SociedadSocio[]
+  contratoMemberships    ContratoSocio[]
+  contratosComoInquilino Contrato[]      @relation("ContratoInquilino")
+  movimientosOrigen      Movimiento[]    @relation("MovimientoOrigenCuenta")
+  movimientosDestino     Movimiento[]    @relation("MovimientoDestinoCuenta")
+  movimientosContraparte Movimiento[]    @relation("MovimientoContraparte")
+
+  @@index([name])
+  @@index([identifier])
+}

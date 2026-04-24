@@ -9,12 +9,10 @@ model User {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  createdTransactions  Transaction[] @relation("TransactionCreatedBy")
-  reversedTransactions Transaction[] @relation("TransactionReversedBy")
-  closedPeriods        Period[]      @relation("PeriodClosedBy")
-  settlements          OwnerSettlement[] @relation("SettlementCreatedBy")
-  auditLogs            AuditLog[]
-  refreshTokens        RefreshToken[]
+  createdMovimientos Movimiento[]   @relation("MovimientoCreadoPor")
+  closedCajas        CajaDia[]      @relation("CajaCerradoPor")
+  auditLogs          AuditLog[]
+  refreshTokens      RefreshToken[]
 }
 
 enum UserRole {

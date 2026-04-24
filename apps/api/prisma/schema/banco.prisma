@@ -1,0 +1,21 @@
+// Banco: 1:1 con sociedad. Saldos ARS+USD denormalizados.
+model Banco {
+  id         String    @id @default(cuid())
+  sociedadId String    @unique
+  nombre     String
+  numero     String
+  saldoArs   BigInt    @default(0)
+  saldoUsd   BigInt    @default(0)
+  isActive   Boolean   @default(true)
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  sociedad           Sociedad     @relation(fields: [sociedadId], references: [id], onDelete: Cascade)
+  movimientosOrigen  Movimiento[] @relation("MovimientoOrigenBanco")
+  movimientosDestino Movimiento[] @relation("MovimientoDestinoBanco")
+
+  @@index([sociedadId])
+  @@index([numero])
+}
