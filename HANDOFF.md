@@ -71,8 +71,43 @@ pnpm --filter @financiero/web build
 ### BigInt serialization
 Cambió a `value.toString()` en `apps/api/src/{index,build-app}.ts`. El frontend nuevo trata montos como strings y los pasa a `formatMoney()`.
 
+### Smoke tests (apps/api/src/smoke.test.ts — 14 tests, 100% pass)
+Se escribieron smoke tests de integración cubriendo el happy path de la demo y las reglas críticas:
+- Flujo completo: alquiler cobro al banco, transfer banco→caja, gasto propiedad, transfer banco→CC (anticipo a socio).
+- Contrato FINALIZADO rechaza cobro posterior con code `CONTRATO_FINALIZADO_FECHA_POSTERIOR`.
+- Sociedad.replaceSocios valida suma bps==10000 (rechaza con 422).
+- Reverso invierte saldos; doble-reverso sobre el mismo original se rechaza.
+- Caja CLOSED rechaza movimiento nuevo (`CAJA_CLOSED`).
+- Caja cerrar arrastra saldos al día siguiente.
+- Reports/posición reparte saldo de banco entre socios según bps.
+- Contrato.POST pre-llena socios desde la sociedad si no se pasan.
+- Alquileres report marca `PENDIENTE` cuando no hubo cobro este mes.
+- Banco 1:1 con sociedad (segundo banco → 409 `BANCO_ALREADY_EXISTS_FOR_SOCIEDAD`).
+- BigInt serializa como string (no Number) para preservar precisión.
+
+Corrí `pnpm --filter @financiero/api test` — 14/14 verde.
+
+### Validación manual end-to-end (2026-04-24, via curl contra el dev server)
+Se ejecutó el flujo descrito en la sección "Verificación manual" del plan, desde DB limpia (solo cuenta seed "Financiera"):
+1. Login como mariana OK.
+2. Crear cuentas Alberto (ALB), Casab (CAS), Inquilino-X OK.
+3. Crear sociedad DA con socios 50/50 OK.
+4. Crear banco 042 para DA OK.
+5. Crear propiedad Av. Mayo 123 4B bajo DA OK.
+6. Crear contrato sobre esa propiedad por 100k ARS → contrato **#1000** (sequence start verificado).
+7. ALQUILER_COBRO 100k → Banco DA saldo 10,000,000 ✓.
+8. TRANSFERENCIA 50k Banco→Caja → Banco 5,000,000, Caja 5,000,000 ✓.
+9. GASTO_PROPIEDAD 10k desde Banco → Banco 4,000,000 ✓.
+10. TRANSFERENCIA 5k Banco→CC Alberto → CC Alberto 500,000, Banco 3,500,000 ✓.
+11. Cerrar caja → saldoFinalArs 5,000,000 ✓.
+12. /reports/posicion → Alberto corresponde 1,750,000 (50% de 3.5M), Casab 1,750,000 ✓.
+13. Finalizar contrato #1000 con motivo ✓.
+14. ALQUILER_COBRO con fecha futura → HTTP 409 `CONTRATO_FINALIZADO_FECHA_POSTERIOR` ✓.
+
+Todas las pantallas operator renderizan SSR con HTTP 200 (`/login`, `/dashboard`, `/cuentas`, `/sociedades`, `/propiedades`, `/contratos`, `/caja`, `/movimientos`). **No se hizo click-through visual en browser** — hay que hacerlo antes de la demo con Mariana para validar interacciones del form de movimiento.
+
 ### Deuda técnica (Fase 4)
-- **Tests backend: 0 escritos.** Plan pedía ~20. Casos prioritarios: movimiento (cada tipo + reverso + concurrencia + caja cerrada + contrato finalizado post-fecha), caja (arrastre), contrato (pre-fill socios).
+- **Tests backend ampliados.** Hay 14 smoke tests de integración. Faltan: concurrencia (5 inserts paralelos al mismo banco saldo), propiedades específicas como soft-delete con dependencias, admin-only endpoints (reactivar contrato, recalcular saldo, reabrir caja).
 - **AuditLog** no se escribe. Decidir: hook Fastify global vs. por-service.
 - **Edit modals** de datos básicos no conectados en detail pages de cuenta/sociedad/propiedad/contrato (socios sí; el resto no). Endpoints PUT existen.
 - **Reactivar contrato** / **recalcular banco** — endpoints admin existen, no hay UI.
