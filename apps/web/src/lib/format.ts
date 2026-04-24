@@ -37,6 +37,18 @@ export function formatDate(dateStr: string): string {
   });
 }
 
+export function formatDateLong(dateStr: string): string {
+  const d = new Date(dateStr);
+  const formatted = new Intl.DateTimeFormat('es-AR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(d);
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
+
 export function formatDateTime(dateStr: string): string {
   const d = new Date(dateStr);
   return d.toLocaleString('es-AR', {

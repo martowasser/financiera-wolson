@@ -2,13 +2,14 @@
 
 import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ViewerSection } from '@/components/viewer/viewer-section';
+import { ViewerDisclosure } from '@/components/viewer/viewer-disclosure';
 import { useQuery } from '@/lib/hooks';
-import { formatMoney, formatDate } from '@/lib/format';
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { formatMoney, formatDateLong } from '@/lib/format';
+import { ChevronLeft, ChevronRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { transactionTypeLabels, label } from '@/lib/labels';
 
 type Period = {
@@ -64,6 +65,11 @@ type CashFlowItem = {
   netFlow: string;
 };
 
+const currencyLabel: Record<string, string> = {
+  ARS: 'Pesos',
+  USD: 'Dólares',
+};
+
 export default function IncomeExpensesPage() {
   const { data: periods, isLoading: loadingPeriods } = useQuery<Period[]>('/periods');
 
@@ -88,167 +94,85 @@ export default function IncomeExpensesPage() {
 
   return (
     <>
-      <PageHeader
-        title="Ingresos y Gastos"
-        description="Flujo de fondos por periodo"
-      />
+      <PageHeader title="Ingresos y Gastos" description="Flujo de fondos por día" />
 
       {/* Period navigation */}
-      <Card>
-        <CardContent className="flex items-center justify-between py-4">
+      <ViewerSection>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <Button
             variant="outline"
-            size="sm"
+            size="lg"
+            className="min-h-12 text-lg"
             disabled={!canPrev}
             onClick={() => setSelectedIndex((i) => i + 1)}
           >
-            <ChevronLeft className="h-4 w-4 mr-1" />
+            <ChevronLeft className="h-5 w-5 mr-2" />
             Anterior
           </Button>
           <div className="text-center">
             {loadingPeriods ? (
-              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-8 w-64 mx-auto" />
             ) : selectedPeriod ? (
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold">{formatDate(selectedPeriod.date)}</span>
-                <Badge variant={selectedPeriod.status === 'OPEN' ? 'default' : 'secondary'}>
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-2xl font-bold">{formatDateLong(selectedPeriod.date)}</span>
+                <Badge
+                  variant={selectedPeriod.status === 'OPEN' ? 'default' : 'secondary'}
+                  className="text-base px-3 py-1"
+                >
                   {selectedPeriod.status === 'OPEN' ? 'Abierto' : 'Cerrado'}
                 </Badge>
               </div>
             ) : (
-              <span className="text-muted-foreground">No hay periodos</span>
+              <span className="text-lg text-muted-foreground">No hay períodos</span>
             )}
           </div>
           <Button
             variant="outline"
-            size="sm"
+            size="lg"
+            className="min-h-12 text-lg"
             disabled={!canNext}
             onClick={() => setSelectedIndex((i) => i - 1)}
           >
             Siguiente
-            <ChevronRight className="h-4 w-4 ml-1" />
+            <ChevronRight className="h-5 w-5 ml-2" />
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </ViewerSection>
 
       {/* Cash flow summary */}
       {loadingCashFlow ? (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-        </div>
+        <ViewerSection>
+          <Skeleton className="h-40" />
+        </ViewerSection>
       ) : cashFlow && cashFlow.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-3">
-          {cashFlow.map((cf) => (
-            <div key={cf.currency} className="space-y-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Ingresos {cf.currency}
-                  </CardTitle>
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl font-bold text-green-600">
-                    {formatMoney(cf.inflows, cf.currency)}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Gastos {cf.currency}
-                  </CardTitle>
-                  <TrendingDown className="h-4 w-4 text-red-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl font-bold text-red-600">
-                    {formatMoney(cf.outflows, cf.currency)}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Flujo neto {cf.currency}
-                  </CardTitle>
-                  <Minus className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-xl font-bold ${Number(cf.netFlow) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatMoney(cf.netFlow, cf.currency)}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ))}
-        </div>
+        cashFlow.map((cf) => <CashFlowBlock key={cf.currency} cf={cf} />)
       ) : selectedPeriod ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            No hay movimientos de caja en este periodo
-          </CardContent>
-        </Card>
+        <ViewerSection>
+          <p className="text-lg text-muted-foreground py-8 text-center">
+            Este día no tuvo movimientos.
+          </p>
+        </ViewerSection>
       ) : null}
 
-      {/* Transaction summary by type */}
-      {movements && movements.summary.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Resumen por tipo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-2 text-left font-medium">Tipo</th>
-                    <th className="px-4 py-2 text-right font-medium">Cantidad</th>
-                    <th className="px-4 py-2 text-right font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {movements.summary.map((s) => (
-                    <tr key={s.type} className="border-b last:border-0">
-                      <td className="px-4 py-2">
-                        <Badge variant="outline">{label(transactionTypeLabels, s.type)}</Badge>
-                      </td>
-                      <td className="px-4 py-2 text-right">{s.count}</td>
-                      <td className="px-4 py-2 text-right font-mono">{formatMoney(s.totalAmount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Transaction list */}
+      {/* Transaction details */}
       {loadingMovements ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full" />
-          ))}
-        </div>
+        <ViewerSection>
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        </ViewerSection>
       ) : movements && movements.transactions.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">
-              Movimientos ({movements.transactionCount})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <table className="w-full text-sm">
+        <ViewerSection>
+          <ViewerDisclosure summary={`Ver movimientos (${movements.transactionCount})`}>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full text-[17px]">
                 <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-2 text-left font-medium">Codigo</th>
-                    <th className="px-4 py-2 text-left font-medium">Descripcion</th>
-                    <th className="px-4 py-2 text-left font-medium">Tipo</th>
-                    <th className="px-4 py-2 text-left font-medium">Medio</th>
-                    <th className="px-4 py-2 text-right font-medium">Monto</th>
+                  <tr className="border-b bg-muted/50 text-left">
+                    <th className="px-4 py-3 font-medium">Descripción</th>
+                    <th className="px-4 py-3 font-medium">Tipo</th>
+                    <th className="px-4 py-3 text-right font-medium">Monto</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -258,36 +182,112 @@ export default function IncomeExpensesPage() {
                       .reduce((sum, e) => sum + Number(e.amount), 0);
                     return (
                       <tr key={txn.id} className="border-b last:border-0">
-                        <td className="px-4 py-2 font-mono text-muted-foreground">{txn.code}</td>
-                        <td className="px-4 py-2">{txn.description}</td>
-                        <td className="px-4 py-2">
-                          <Badge variant="outline">{label(transactionTypeLabels, txn.type)}</Badge>
+                        <td className="px-4 py-3">{txn.description}</td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className="text-sm">
+                            {label(transactionTypeLabels, txn.type)}
+                          </Badge>
                         </td>
-                        <td className="px-4 py-2 text-muted-foreground">
-                          {txn.paymentMethod === 'CASH'
-                            ? 'Efectivo'
-                            : txn.paymentMethod === 'BANK_TRANSFER'
-                              ? 'Transferencia'
-                              : txn.paymentMethod === 'CHECK'
-                                ? 'Cheque'
-                                : txn.paymentMethod ?? '-'}
-                        </td>
-                        <td className="px-4 py-2 text-right font-mono">{formatMoney(debitTotal)}</td>
+                        <td className="px-4 py-3 text-right font-mono">{formatMoney(debitTotal)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
-      ) : selectedPeriod ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            No hay movimientos en este dia
-          </CardContent>
-        </Card>
+          </ViewerDisclosure>
+
+          {movements.summary.length > 0 && (
+            <ViewerDisclosure summary="Ver resumen por tipo">
+              <div className="overflow-x-auto rounded-md border">
+                <table className="w-full text-[17px]">
+                  <thead>
+                    <tr className="border-b bg-muted/50 text-left">
+                      <th className="px-4 py-3 font-medium">Tipo</th>
+                      <th className="px-4 py-3 text-right font-medium">Cantidad</th>
+                      <th className="px-4 py-3 text-right font-medium">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {movements.summary.map((s) => (
+                      <tr key={s.type} className="border-b last:border-0">
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className="text-sm">
+                            {label(transactionTypeLabels, s.type)}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-right">{s.count}</td>
+                        <td className="px-4 py-3 text-right font-mono">
+                          {formatMoney(s.totalAmount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </ViewerDisclosure>
+          )}
+        </ViewerSection>
       ) : null}
     </>
+  );
+}
+
+function CashFlowBlock({ cf }: { cf: CashFlowItem }) {
+  const inflow = Number(cf.inflows);
+  const outflow = Number(cf.outflows);
+  const net = Number(cf.netFlow);
+  const max = Math.max(inflow, outflow, 1);
+
+  return (
+    <ViewerSection
+      title={`${currencyLabel[cf.currency] ?? cf.currency} (${
+        cf.currency === 'ARS' ? '$' : cf.currency === 'USD' ? 'US$' : cf.currency
+      })`}
+    >
+      <div className="space-y-4">
+        <Row label="Entradas" value={inflow} max={max} color="bg-green-500" currency={cf.currency} />
+        <Row label="Salidas" value={outflow} max={max} color="bg-red-500" currency={cf.currency} />
+      </div>
+      <div className="flex items-center gap-3 text-xl pt-2">
+        <span className="text-muted-foreground">Neto:</span>
+        <span className={`font-mono font-bold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          {net >= 0 ? '+' : ''}
+          {formatMoney(net, cf.currency)}
+        </span>
+        {net >= 0 ? (
+          <CheckCircle2 size={26} className="text-green-600" aria-hidden />
+        ) : (
+          <AlertCircle size={26} className="text-red-600" aria-hidden />
+        )}
+      </div>
+    </ViewerSection>
+  );
+}
+
+function Row({
+  label: rowLabel,
+  value,
+  max,
+  color,
+  currency,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  color: string;
+  currency: string;
+}) {
+  const pct = max > 0 ? (value / max) * 100 : 0;
+  return (
+    <div className="flex items-center gap-4">
+      <span className="w-28 text-lg text-muted-foreground shrink-0">{rowLabel}</span>
+      <div className="flex-1 h-10 bg-muted rounded-md overflow-hidden">
+        <div className={`h-full ${color} transition-all`} style={{ width: `${pct}%` }} aria-hidden />
+      </div>
+      <span className="w-48 text-right font-mono text-2xl font-bold">
+        {formatMoney(value, currency)}
+      </span>
+    </div>
   );
 }

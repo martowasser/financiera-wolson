@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ViewerDisclosure } from '@/components/viewer/viewer-disclosure';
 import { useQuery } from '@/lib/hooks';
 import { formatMoney, formatDate } from '@/lib/format';
 import { ArrowLeft } from 'lucide-react';
@@ -61,7 +62,6 @@ export default function ViewerEntityDetailPage({ params }: { params: Promise<{ i
     `/ownerships/entity/${id}`,
   );
 
-  // Group balances by currency
   const balancesByCurrency: Record<string, AccountBalance[]> = {};
   if (balances) {
     for (const b of balances) {
@@ -80,8 +80,13 @@ export default function ViewerEntityDetailPage({ params }: { params: Promise<{ i
             : undefined
         }
         actions={
-          <Button variant="outline" size="sm" onClick={() => router.push('/viewer/entities')}>
-            <ArrowLeft className="h-4 w-4 mr-1" />
+          <Button
+            variant="outline"
+            size="lg"
+            className="min-h-12 text-lg"
+            onClick={() => router.push('/viewer/entities')}
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
             Volver
           </Button>
         }
@@ -89,7 +94,7 @@ export default function ViewerEntityDetailPage({ params }: { params: Promise<{ i
 
       {entity?.notes && (
         <Card>
-          <CardContent className="py-3 text-sm text-muted-foreground">
+          <CardContent className="py-4 text-[17px] text-muted-foreground">
             {entity.notes}
           </CardContent>
         </Card>
@@ -101,16 +106,16 @@ export default function ViewerEntityDetailPage({ params }: { params: Promise<{ i
       ) : ownerships && ownerships.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Socios</CardTitle>
+            <CardTitle className="text-xl">Socios</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full text-[17px]">
                 <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-2 text-left font-medium">Socio</th>
-                    <th className="px-4 py-2 text-right font-medium">Participacion</th>
-                    <th className="px-4 py-2 text-left font-medium">Desde</th>
+                  <tr className="border-b bg-muted/50 text-left">
+                    <th className="px-4 py-3 font-medium">Socio</th>
+                    <th className="px-4 py-3 text-right font-medium">Participación</th>
+                    <th className="px-4 py-3 font-medium">Desde</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -122,11 +127,11 @@ export default function ViewerEntityDetailPage({ params }: { params: Promise<{ i
                         className="border-b last:border-0 hover:bg-muted/30 cursor-pointer"
                         onClick={() => router.push(`/viewer/entities/${o.ownerId}`)}
                       >
-                        <td className="px-4 py-2">{o.owner.name}</td>
-                        <td className="px-4 py-2 text-right font-mono">
+                        <td className="px-4 py-3">{o.owner.name}</td>
+                        <td className="px-4 py-3 text-right font-mono">
                           {(o.percentage / 100).toFixed(0)}%
                         </td>
-                        <td className="px-4 py-2 text-muted-foreground">
+                        <td className="px-4 py-3 text-muted-foreground">
                           {formatDate(o.validFrom)}
                         </td>
                       </tr>
@@ -140,9 +145,9 @@ export default function ViewerEntityDetailPage({ params }: { params: Promise<{ i
 
       {/* Account balances by currency */}
       {loadingBalances ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full" />
+            <Skeleton key={i} className="h-12 w-full" />
           ))}
         </div>
       ) : balances && balances.length > 0 ? (
@@ -151,40 +156,34 @@ export default function ViewerEntityDetailPage({ params }: { params: Promise<{ i
           return (
             <Card key={currency}>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Cuentas {currency}</CardTitle>
-                <div className="text-lg font-bold font-mono">
+                <CardTitle className="text-xl">Cuentas {currency}</CardTitle>
+                <div className="text-xl font-bold font-mono">
                   {formatMoney(totalBalance, currency)}
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <table className="w-full text-sm">
+              <CardContent className="space-y-4">
+                <div className="overflow-x-auto rounded-md border">
+                  <table className="w-full text-[17px]">
                     <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="px-4 py-2 text-left font-medium">Cuenta</th>
-                        <th className="px-4 py-2 text-left font-medium">Tipo</th>
-                        <th className="px-4 py-2 text-right font-medium">Debitos</th>
-                        <th className="px-4 py-2 text-right font-medium">Creditos</th>
-                        <th className="px-4 py-2 text-right font-medium">Saldo</th>
+                      <tr className="border-b bg-muted/50 text-left">
+                        <th className="px-4 py-3 font-medium">Cuenta</th>
+                        <th className="px-4 py-3 font-medium">Tipo</th>
+                        <th className="px-4 py-3 text-right font-medium">Saldo</th>
                       </tr>
                     </thead>
                     <tbody>
                       {accounts.map((a) => (
                         <tr key={a.id} className="border-b last:border-0">
-                          <td className="px-4 py-2">
+                          <td className="px-4 py-3">
                             <div>{a.name}</div>
-                            <div className="text-xs text-muted-foreground">{a.path}</div>
+                            <div className="text-sm text-muted-foreground">{a.path}</div>
                           </td>
-                          <td className="px-4 py-2">
-                            <Badge variant="outline">{label(accountTypeLabels, a.type)}</Badge>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className="text-sm">
+                              {label(accountTypeLabels, a.type)}
+                            </Badge>
                           </td>
-                          <td className="px-4 py-2 text-right font-mono">
-                            {formatMoney(a.debitsPosted, currency)}
-                          </td>
-                          <td className="px-4 py-2 text-right font-mono">
-                            {formatMoney(a.creditsPosted, currency)}
-                          </td>
-                          <td className="px-4 py-2 text-right font-mono font-medium">
+                          <td className="px-4 py-3 text-right font-mono font-medium">
                             {formatMoney(a.balance, currency)}
                           </td>
                         </tr>
@@ -192,14 +191,45 @@ export default function ViewerEntityDetailPage({ params }: { params: Promise<{ i
                     </tbody>
                   </table>
                 </div>
+
+                <ViewerDisclosure summary="Ver débitos y créditos">
+                  <div className="overflow-x-auto rounded-md border">
+                    <table className="w-full text-[17px]">
+                      <thead>
+                        <tr className="border-b bg-muted/50 text-left">
+                          <th className="px-4 py-3 font-medium">Cuenta</th>
+                          <th className="px-4 py-3 text-right font-medium">Débitos</th>
+                          <th className="px-4 py-3 text-right font-medium">Créditos</th>
+                          <th className="px-4 py-3 text-right font-medium">Saldo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {accounts.map((a) => (
+                          <tr key={a.id} className="border-b last:border-0">
+                            <td className="px-4 py-3">{a.name}</td>
+                            <td className="px-4 py-3 text-right font-mono">
+                              {formatMoney(a.debitsPosted, currency)}
+                            </td>
+                            <td className="px-4 py-3 text-right font-mono">
+                              {formatMoney(a.creditsPosted, currency)}
+                            </td>
+                            <td className="px-4 py-3 text-right font-mono font-medium">
+                              {formatMoney(a.balance, currency)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </ViewerDisclosure>
               </CardContent>
             </Card>
           );
         })
       ) : (
         <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            Esta entidad no tiene cuentas
+          <CardContent className="py-8 text-center text-lg text-muted-foreground">
+            Esta sociedad no tiene cuentas registradas.
           </CardContent>
         </Card>
       )}

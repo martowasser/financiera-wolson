@@ -31,14 +31,17 @@ const tabDescription: Record<TabValue, string> = {
 };
 
 const columns: Column<Entity>[] = [
-  { header: 'Nombre', accessor: 'name' },
+  { header: 'Nombre', accessor: 'name', className: 'text-[17px]' },
   {
     header: 'Tipo',
     accessor: (row) => (
-      <Badge variant="outline">{typeLabels[row.type] ?? row.type}</Badge>
+      <Badge variant="outline" className="text-base">
+        {typeLabels[row.type] ?? row.type}
+      </Badge>
     ),
+    className: 'text-[17px]',
   },
-  { header: 'CUIT', accessor: (row) => row.taxId ?? '-' },
+  { header: 'CUIT', accessor: (row) => row.taxId ?? '-', className: 'text-[17px]' },
 ];
 
 export default function ViewerEntitiesPage() {
@@ -64,12 +67,14 @@ export default function ViewerEntitiesPage() {
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
-          <TabsTrigger value="sociedades">Sociedades</TabsTrigger>
-          <TabsTrigger value="personas">Personas</TabsTrigger>
+          <TabsTrigger value="sociedades" className="text-base">Sociedades</TabsTrigger>
+          <TabsTrigger value="personas" className="text-base">Personas</TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <ViewerEntityList key={activeTab} activeTab={activeTab} />
+      <div className="[&_table]:!text-[17px] [&_th]:text-lg [&_td]:py-4">
+        <ViewerEntityList key={activeTab} activeTab={activeTab} />
+      </div>
     </>
   );
 }
@@ -88,7 +93,11 @@ function ViewerEntityList({ activeTab }: { activeTab: TabValue }) {
       columns={columns}
       data={entities}
       isLoading={isLoading}
-      emptyMessage={activeTab === 'sociedades' ? 'No hay sociedades.' : 'No hay personas.'}
+      emptyMessage={
+        activeTab === 'sociedades'
+          ? 'Todavía no hay sociedades registradas.'
+          : 'Todavía no hay personas registradas.'
+      }
       rowKey={(row) => row.id}
       onRowClick={(row) => router.push(`/viewer/entities/${row.id}`)}
     />
