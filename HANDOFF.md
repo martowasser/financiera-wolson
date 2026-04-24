@@ -1,9 +1,85 @@
 # Handoff — Sistema Financiero
 
 ## Estado actual
-- [x] Fase 1 — Backend completo (completada 2026-04-09)
-- [x] Fase 2 — Frontend OPERATOR (completada 2026-04-10)
-- [x] Fase 3 — Frontend VIEWER (completada 2026-04-10)
+- [x] Fase 1 — Backend completo (completada 2026-04-09) — **pre-rebuild, ver Fase 4**
+- [x] Fase 2 — Frontend OPERATOR (completada 2026-04-10) — **pre-rebuild, ver Fase 4**
+- [x] Fase 3 — Frontend VIEWER (completada 2026-04-10) — **reemplazado por placeholder, ver Fase 4**
+- [x] Fase 4 — Rebuild post-entrevista Mariana (completada 2026-04-24)
+
+---
+
+## Fase 4 — Rebuild post-entrevista Mariana (2026-04-24)
+
+### Contexto
+Tras la segunda entrevista con Mariana (`transcripcion-entrevista-2-mariana.md`, 2026-04-23) y screenshots del sistema legacy, se reescribió el sistema sobre **su modelo mental real**, no sobre contabilidad de doble entrada.
+
+Plan con decisiones: `thoughts/shared/plans/2026-04-23-rebuild-modelo-mariana.md`.
+Tag safety: `pre-rebuild-2026-04-23` en `main`.
+
+### Schema nuevo
+Se tiraron Entity, Account, Transaction, Entry, Period, Ownership, Property, Lease, Invoice, OwnerSettlement, BankReconciliation, SociedadMember + trigger PG de doble entrada.
+
+10 modelos de negocio + 2 auth:
+- `Cuenta` (reemplaza Person/Entity; saldos ARS+USD propios)
+- `Sociedad` + `SociedadSocio` (bps==10000)
+- `Banco` (1:1 con sociedad, saldos ARS+USD)
+- `Propiedad`
+- `Contrato` + `ContratoSocio` (socios pre-llenados desde sociedad, editables). `numero` desde 1000
+- `CajaDia` (singleton por fecha, arrastra saldos)
+- `Movimiento` (`origenBucket` + `destinoBucket`: CAJA | BANCO | CUENTA_CORRIENTE). `numero` desde 1000
+- `AuditLog` (genérico before/after — **no escrito por ningún módulo aún**)
+
+Migraciones fresh: `20260424200210_rebuild_modelo_mariana` + `20260424200211_numero_sequences_start_1000`.
+
+### Módulos backend
+
+| Prefijo | Módulo |
+|---|---|
+| `/api/auth` | auth (sin cambios) |
+| `/api/cuentas` | cuenta — CRUD + `GET /:id/movimientos` |
+| `/api/sociedades` | sociedad — CRUD + `POST /:id/socios` (reemplaza, suma==10000) |
+| `/api/bancos` | banco — CRUD + cerrar/reabrir + admin `POST /:id/recalcular-saldo` |
+| `/api/propiedades` | propiedad — CRUD |
+| `/api/contratos` | contrato — CRUD + socios + finalizar + admin reactivar |
+| `/api/caja` | caja — today auto-create, cerrar (crea día siguiente), admin reabrir |
+| `/api/movimientos` | movimiento — POST con flow rules per-tipo, reversar, PUT notes/comprobante/facturado |
+| `/api/reports` | reporting — `/posicion`, `/alquileres`, `/caja/:fecha/resumen` |
+
+Eliminados: account, entity, ownership, period, ledger, property, lease, invoice, settlement, reconciliation, reporting viejo, sociedad-member.
+
+### UI operator — 7 pantallas en `apps/web/src/app/(operator)/`
+`/dashboard`, `/cuentas` + `[id]`, `/sociedades` + `[id]`, `/propiedades` + `[id]`, `/contratos` + `[id]`, `/caja` + `[fecha]`, `/movimientos`.
+
+Movimientos es el core — modal con flow rules mirrored del server (I/E/T/F) y etiquetas "De dónde sale" / "A dónde va". **Sin "débito"/"crédito".** Cmd+K + sidebar reapuntados.
+
+### Viewer
+`/viewer/*` es un placeholder "Vista temporalmente no disponible" (`apps/web/src/app/(viewer)/viewer/page.tsx`). Rediseño: `thoughts/shared/plans/2026-04-24-viewer-alberto.md`.
+
+### Comandos
+```bash
+pnpm db:reset && pnpm db:seed     # DB vacía + 3 users + 1 cuenta Financiera
+pnpm --filter @financiero/api build
+pnpm --filter @financiero/api test    # --passWithNoTests (ver deuda técnica)
+pnpm --filter @financiero/web build
+```
+
+### Usuarios seed
+- `admin` / `admin123` — ADMIN
+- `mariana` / `admin123` — OPERATOR
+- `alberto` / `admin123` — VIEWER (solo ve placeholder)
+
+### BigInt serialization
+Cambió a `value.toString()` en `apps/api/src/{index,build-app}.ts`. El frontend nuevo trata montos como strings y los pasa a `formatMoney()`.
+
+### Deuda técnica (Fase 4)
+- **Tests backend: 0 escritos.** Plan pedía ~20. Casos prioritarios: movimiento (cada tipo + reverso + concurrencia + caja cerrada + contrato finalizado post-fecha), caja (arrastre), contrato (pre-fill socios).
+- **AuditLog** no se escribe. Decidir: hook Fastify global vs. por-service.
+- **Edit modals** de datos básicos no conectados en detail pages de cuenta/sociedad/propiedad/contrato (socios sí; el resto no). Endpoints PUT existen.
+- **Reactivar contrato** / **recalcular banco** — endpoints admin existen, no hay UI.
+- **Conciliación bancaria** fuera de scope; Phase 6 opcional del plan no implementada.
+- **Serializable isolation** solo en `movimiento.create`/`reversar`.
+
+---
 
 ## Fase 1 — Notas del handoff
 

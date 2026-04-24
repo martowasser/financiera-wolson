@@ -12,17 +12,17 @@
 
 **Working directly en `main`** (decisión del usuario: "do it all in main. run straight w/o pause. no worries. we can always revert commits"). Tag `pre-rebuild-2026-04-23` en main como safety net.
 
-### Estado actual: Phase 2 completa, arrancando Phase 3
+### Estado actual: Phases 1-5 completas; Phase 6 opcional no hecha.
 
 | Fase | Estado | Commit |
 |------|--------|--------|
 | Phase 0 (docs) | ✅ | `49b8f73` docs: plan + transcript for rebuild modelo Mariana |
 | Phase 1 (schema) | ✅ | `92bf47e` feat(api)!: rebuild Prisma schema around Mariana's mental model |
 | Phase 2 (backend) | ✅ | `56bcd95` feat(api): add 8 new business modules over the bucket-based schema |
-| Phase 3 (frontend) | 🔄 en progreso | — |
-| Phase 4 (UX polish) | ⏳ | — |
-| Phase 5 (cleanup + handoff) | ⏳ | — |
-| Phase 6 (placeholder conciliación, opcional) | ⏳ | — |
+| Phase 3 (frontend) | ✅ | `be55504` feat(web): rebuild operator UI around new domain + neuter viewer |
+| Phase 4 (UX polish) | ✅ | absorbida en Phase 3 (auditoría sin hallazgos) |
+| Phase 5 (cleanup + handoff) | ✅ | HANDOFF.md actualizado, memoria agregada |
+| Phase 6 (placeholder conciliación, opcional) | ⏭ | no implementada |
 
 ### Decisiones de implementación que se desviaron o aclararon
 
