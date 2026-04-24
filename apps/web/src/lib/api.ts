@@ -80,7 +80,8 @@ export async function apiFetch<T = unknown>(path: string, opts: FetchOptions = {
     if (qs) url += `?${qs}`;
   }
 
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
 
   let res = await fetch(url, {
