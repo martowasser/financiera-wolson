@@ -5,67 +5,83 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@/lib/hooks';
 import type { PaletteCommand } from './types';
 
-type EntitySummary = {
+type CuentaSummary = { id: string; name: string; identifier: string | null };
+type SociedadSummary = { id: string; name: string };
+type PropiedadSummary = { id: string; nombre: string; direccion: string };
+type ContratoSummary = {
   id: string;
-  name: string;
-  type: string;
-  taxId: string | null;
+  numero: number;
+  inquilino: { name: string };
+  propiedad: { nombre: string };
 };
-
-type TransactionSummary = {
+type MovimientoSummary = {
   id: string;
-  code: string;
-  description: string;
-  type: string;
-  status: string;
-  createdAt: string;
+  numero: number;
+  tipo: string;
+  monto: string;
+  moneda: string;
+  notes: string | null;
 };
 
-const TRANSACTION_LIMIT = 200;
-
-const ENTITY_TYPE_LABEL: Record<string, string> = {
-  COMPANY: 'Sociedad',
-  PERSON: 'Persona',
-  FIRM: 'Financiera',
-  THIRD_PARTY: 'Tercero',
-};
+const RECENT_LIMIT = 200;
 
 export function usePaletteData(isOpen: boolean): PaletteCommand[] {
   const router = useRouter();
-  const { data: entities, refetch: refetchEntities } = useQuery<EntitySummary[]>('/entities');
-  const { data: transactions, refetch: refetchTransactions } = useQuery<TransactionSummary[]>('/transactions');
+  const { data: cuentas,    refetch: rA } = useQuery<CuentaSummary[]>('/cuentas');
+  const { data: sociedades, refetch: rB } = useQuery<SociedadSummary[]>('/sociedades');
+  const { data: propiedades,refetch: rC } = useQuery<PropiedadSummary[]>('/propiedades');
+  const { data: contratos,  refetch: rD } = useQuery<ContratoSummary[]>('/contratos');
+  const { data: movimientos,refetch: rE } = useQuery<MovimientoSummary[]>('/movimientos');
 
   useEffect(() => {
-    if (isOpen) {
-      refetchEntities();
-      refetchTransactions();
-    }
-  }, [isOpen, refetchEntities, refetchTransactions]);
+    if (isOpen) { rA(); rB(); rC(); rD(); rE(); }
+  }, [isOpen, rA, rB, rC, rD, rE]);
 
   return useMemo(() => {
     const items: PaletteCommand[] = [];
 
-    for (const e of entities ?? []) {
+    for (const c of cuentas ?? []) {
       items.push({
-        id: `entity-${e.id}`,
-        label: e.name,
+        id: `cuenta-${c.id}`,
+        label: c.identifier ? `${c.name} · ${c.identifier}` : c.name,
+        group: 'Cuentas',
+        run: () => router.push(`/cuentas/${c.id}`),
+      });
+    }
+    for (const s of sociedades ?? []) {
+      items.push({
+        id: `sociedad-${s.id}`,
+        label: s.name,
         group: 'Sociedades',
-        keywords: [ENTITY_TYPE_LABEL[e.type] ?? e.type, e.taxId ?? ''].filter(Boolean),
-        run: () => router.push(`/entities?id=${e.id}`),
+        run: () => router.push(`/sociedades/${s.id}`),
       });
     }
-
-    const recentTxns = (transactions ?? []).slice(0, TRANSACTION_LIMIT);
-    for (const t of recentTxns) {
+    for (const p of propiedades ?? []) {
       items.push({
-        id: `txn-${t.id}`,
-        label: `${t.code} · ${t.description}`,
-        group: 'Movimientos',
-        keywords: [t.type, t.status],
-        run: () => router.push(`/transactions?id=${t.id}`),
+        id: `propiedad-${p.id}`,
+        label: p.nombre,
+        group: 'Propiedades',
+        keywords: [p.direccion],
+        run: () => router.push(`/propiedades/${p.id}`),
       });
     }
-
+    for (const c of contratos ?? []) {
+      items.push({
+        id: `contrato-${c.id}`,
+        label: `#${c.numero} · ${c.propiedad.nombre} · ${c.inquilino.name}`,
+        group: 'Contratos',
+        run: () => router.push(`/contratos/${c.id}`),
+      });
+    }
+    const recentMovs = (movimientos ?? []).slice(0, RECENT_LIMIT);
+    for (const m of recentMovs) {
+      items.push({
+        id: `mov-${m.id}`,
+        label: `#${m.numero} · ${m.tipo} · ${m.monto} ${m.moneda}${m.notes ? ' · ' + m.notes.slice(0, 60) : ''}`,
+        group: 'Movimientos',
+        run: () => router.push(`/movimientos?id=${m.id}`),
+      });
+    }
     return items;
-  }, [entities, transactions, router]);
+  }, [cuentas, sociedades, propiedades, contratos, movimientos, router]);
 }

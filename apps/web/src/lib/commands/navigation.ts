@@ -3,17 +3,13 @@ import type { PaletteCommand } from './types';
 type Router = { push: (href: string) => void };
 
 const NAV_ITEMS: { href: string; label: string; keywords?: string[] }[] = [
-  { href: '/dashboard', label: 'Dashboard', keywords: ['inicio', 'home'] },
-  { href: '/transactions', label: 'Movimientos', keywords: ['transacciones', 'asientos'] },
-  { href: '/period', label: 'Cierre de Caja', keywords: ['cierre', 'periodo', 'caja'] },
-  { href: '/entities?tab=sociedades', label: 'Sociedades', keywords: ['entidades', 'empresas'] },
-  { href: '/entities?tab=personas', label: 'Personas', keywords: ['entidades', 'persona', 'financiera', 'tercero'] },
-  { href: '/accounts', label: 'Cuentas', keywords: ['plan de cuentas', 'accounts'] },
-  { href: '/properties', label: 'Propiedades', keywords: ['inmuebles'] },
-  { href: '/leases', label: 'Contratos', keywords: ['alquileres', 'leases'] },
-  { href: '/invoices', label: 'Cobro Alquileres', keywords: ['invoices', 'facturas', 'cobros'] },
-  { href: '/settlements', label: 'Distribución a Socios', keywords: ['socios', 'distribucion', 'liquidacion'] },
-  { href: '/reconciliation', label: 'Conciliación', keywords: ['reconciliacion', 'match'] },
+  { href: '/dashboard',   label: 'Dashboard',    keywords: ['inicio', 'home'] },
+  { href: '/cuentas',     label: 'Cuentas',      keywords: ['cuenta corriente', 'socios', 'inquilinos'] },
+  { href: '/sociedades',  label: 'Sociedades',   keywords: ['empresas', 'da', 'mr'] },
+  { href: '/propiedades', label: 'Propiedades',  keywords: ['inmuebles', 'propiedad'] },
+  { href: '/contratos',   label: 'Contratos',    keywords: ['alquileres', 'leases'] },
+  { href: '/caja',        label: 'Caja',         keywords: ['cierre', 'efectivo', 'dia'] },
+  { href: '/movimientos', label: 'Movimientos',  keywords: ['transacciones', 'asientos', 'cobros', 'pagos'] },
 ];
 
 export function navigationCommands(router: Router): PaletteCommand[] {

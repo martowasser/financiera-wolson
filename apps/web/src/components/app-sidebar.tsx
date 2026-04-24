@@ -1,46 +1,35 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import {
   LayoutDashboard,
-  ArrowLeftRight,
-  CalendarCheck,
-  Building2,
-  User,
   Wallet,
+  Building2,
   Home,
   FileText,
-  Receipt,
-  Users,
-  Scale,
+  CalendarCheck,
+  ArrowLeftRight,
   LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { isNavItemActive } from './sidebar-utils';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/transactions', label: 'Movimientos', icon: ArrowLeftRight },
-  { href: '/period', label: 'Cierre de Caja', icon: CalendarCheck },
-  { href: '/entities?tab=sociedades', label: 'Sociedades', icon: Building2 },
-  { href: '/entities?tab=personas', label: 'Personas', icon: User },
-  { href: '/accounts', label: 'Cuentas', icon: Wallet },
-  { href: '/properties', label: 'Propiedades', icon: Home },
-  { href: '/leases', label: 'Contratos', icon: FileText },
-  { href: '/invoices', label: 'Cobro Alquileres', icon: Receipt },
-  { href: '/settlements', label: 'Distribucion a Socios', icon: Users },
-  { href: '/reconciliation', label: 'Conciliacion', icon: Scale },
+  { href: '/dashboard',     label: 'Dashboard',    icon: LayoutDashboard },
+  { href: '/cuentas',       label: 'Cuentas',      icon: Wallet },
+  { href: '/sociedades',    label: 'Sociedades',   icon: Building2 },
+  { href: '/propiedades',   label: 'Propiedades',  icon: Home },
+  { href: '/contratos',     label: 'Contratos',    icon: FileText },
+  { href: '/caja',          label: 'Caja',         icon: CalendarCheck },
+  { href: '/movimientos',   label: 'Movimientos',  icon: ArrowLeftRight },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const currentTab = searchParams.get('tab');
   const { user, logout } = useAuth();
 
   return (
@@ -58,7 +47,7 @@ export function AppSidebar() {
       <ScrollArea className="flex-1 px-2 py-2">
         <nav className="flex flex-col gap-0.5">
           {navItems.map((item) => {
-            const active = isNavItemActive(item.href, pathname, currentTab);
+            const active = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <Link
                 key={item.href}
@@ -86,7 +75,7 @@ export function AppSidebar() {
           onClick={logout}
         >
           <LogOut className="h-4 w-4" />
-          Cerrar sesion
+          Cerrar sesión
         </Button>
       </div>
     </aside>

@@ -1,96 +1,52 @@
 // Spanish labels for all enums used across the system.
-// Single source of truth — import from here instead of defining local maps.
 
-export const transactionTypeLabels: Record<string, string> = {
-  INCOME: 'Ingreso',
-  EXPENSE: 'Gasto',
-  TRANSFER: 'Transferencia',
-  BANK_FEE: 'Gasto Bancario',
-  REVERSAL: 'Anulacion',
-  ADJUSTMENT: 'Ajuste',
+export const movimientoTipoLabels: Record<string, string> = {
+  ALQUILER_COBRO:    'Cobro de alquiler',
+  ALQUILER_PAGO:     'Pago de alquiler',
+  GASTO:             'Gasto',
+  GASTO_SOCIEDAD:    'Gasto de sociedad',
+  GASTO_PROPIEDAD:   'Gasto de propiedad',
+  INGRESO_VARIO:     'Ingreso vario',
+  TRANSFERENCIA:     'Transferencia',
+  COMISION_BANCARIA: 'Comisión bancaria',
+  DEBITO_AUTOMATICO: 'Débito automático',
+  RECUPERO:          'Recupero',
+  AJUSTE:            'Ajuste',
+  OTRO:              'Otro',
 };
 
-export const transactionStatusLabels: Record<string, string> = {
-  CONFIRMED: 'Confirmada',
-  REVERSED: 'Anulada',
+export const bucketLabels: Record<string, string> = {
+  CAJA:             'Caja',
+  BANCO:            'Banco',
+  CUENTA_CORRIENTE: 'Cuenta corriente',
 };
 
-export const accountTypeLabels: Record<string, string> = {
-  CASH: 'Efectivo',
-  BANK: 'Banco',
-  RECEIVABLE: 'Cobrar',
-  PAYABLE: 'Pagar',
-  EQUITY: 'Patrimonio',
-  REVENUE: 'Ingreso',
-  EXPENSE: 'Gasto',
+export const contratoStatusLabels: Record<string, string> = {
+  ACTIVO:     'Activo',
+  FINALIZADO: 'Finalizado',
 };
 
-export const entityTypeLabels: Record<string, string> = {
-  COMPANY: 'Sociedad',
-  PERSON: 'Persona',
-  FIRM: 'Empresa',
-  THIRD_PARTY: 'Tercero',
+export const cajaStatusLabels: Record<string, string> = {
+  OPEN:   'Abierta',
+  CLOSED: 'Cerrada',
 };
 
-export const propertyTypeLabels: Record<string, string> = {
-  APARTMENT: 'Departamento',
-  COMMERCIAL: 'Comercial',
-  OFFICE: 'Oficina',
-  PARKING: 'Cochera',
-  WAREHOUSE: 'Deposito',
-  LAND: 'Terreno',
-  OTHER: 'Otro',
-};
-
-export const invoiceStatusLabels: Record<string, string> = {
-  PENDING: 'Pendiente',
-  PAID: 'Cobrado',
-  PARTIAL: 'Parcial',
-  CANCELLED: 'Cancelado',
-};
-
-export const settlementStatusLabels: Record<string, string> = {
-  DRAFT: 'Borrador',
-  APPROVED: 'Aprobada',
-  DISTRIBUTED: 'Distribuida',
-};
-
-export const reconciliationStatusLabels: Record<string, string> = {
-  IN_PROGRESS: 'En Progreso',
-  COMPLETED: 'Completa',
-  DISCREPANCY: 'Discrepancia',
-};
-
-export const entryTypeLabels: Record<string, string> = {
-  DEBIT: 'Debito',
-  CREDIT: 'Credito',
-};
-
-export const paymentMethodLabels: Record<string, string> = {
-  CASH: 'Efectivo',
-  BANK_TRANSFER: 'Transferencia',
-  CHECK: 'Cheque',
+export const monedaLabels: Record<string, string> = {
+  ARS: 'Pesos',
+  USD: 'Dólares',
 };
 
 export const userRoleLabels: Record<string, string> = {
-  ADMIN: 'Administrador',
+  ADMIN:    'Administrador',
   OPERATOR: 'Operador',
-  VIEWER: 'Visualizador',
+  VIEWER:   'Visualizador',
 };
 
-export const periodStatusLabels: Record<string, string> = {
-  OPEN: 'Abierto',
-  CLOSED: 'Cerrado',
-};
-
-export const leaseManagedByLabels: Record<string, string> = {
-  DIRECT: 'Directo',
-  THIRD_PARTY: 'Rendido por tercero',
-};
-
-export const normalBalanceLabels: Record<string, string> = {
-  DEBIT: 'Debito',
-  CREDIT: 'Credito',
+export const estadoDelMesLabels: Record<string, string> = {
+  AL_DIA:        'Al día',
+  SIN_FACTURAR:  'Sin facturar',
+  PENDIENTE:     'Pendiente',
+  NO_APLICA:     '—',
 };
 
 /** Generic label lookup — returns the Spanish label or the raw value as fallback. */
