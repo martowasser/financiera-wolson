@@ -19,7 +19,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
 const navItems = [
-  { href: '/dashboard',     label: 'Dashboard',    icon: LayoutDashboard },
+  { href: '/dashboard',     label: 'Resumen',      icon: LayoutDashboard },
   { href: '/cuentas',       label: 'Cuentas',      icon: Wallet },
   { href: '/sociedades',    label: 'Sociedades',   icon: Building2 },
   { href: '/propiedades',   label: 'Propiedades',  icon: Home },

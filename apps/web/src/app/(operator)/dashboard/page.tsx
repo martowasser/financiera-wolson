@@ -66,7 +66,7 @@ export default function DashboardPage() {
       <CajaCerradaBanner />
 
       <PageHeader
-        title="Dashboard"
+        title="Resumen"
         description={`Hoy: ${formatDate(today)}`}
         actions={
           <>

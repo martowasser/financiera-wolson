@@ -3,7 +3,7 @@ import type { PaletteCommand } from './types';
 type Router = { push: (href: string) => void };
 
 const NAV_ITEMS: { href: string; label: string; keywords?: string[] }[] = [
-  { href: '/dashboard',   label: 'Dashboard',    keywords: ['inicio', 'home'] },
+  { href: '/dashboard',   label: 'Resumen',      keywords: ['inicio', 'home', 'dashboard'] },
   { href: '/cuentas',     label: 'Cuentas',      keywords: ['cuenta corriente', 'socios', 'inquilinos'] },
   { href: '/sociedades',  label: 'Sociedades',   keywords: ['empresas', 'da', 'mr'] },
   { href: '/propiedades', label: 'Propiedades',  keywords: ['inmuebles', 'propiedad'] },

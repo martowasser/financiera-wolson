@@ -32,7 +32,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
 
   const navChordShortcuts: Shortcut[] = useMemo(() => {
     const chords: { keys: [string, string]; href: string; label: string; tentative?: boolean }[] = [
-      { keys: ['g', 'd'], href: '/dashboard', label: 'Ir a Dashboard' },
+      { keys: ['g', 'd'], href: '/dashboard', label: 'Ir a Resumen' },
       { keys: ['g', 'm'], href: '/transactions', label: 'Ir a Movimientos' },
       { keys: ['g', 'c'], href: '/period', label: 'Ir a Cierre de Caja', tentative: true },
       { keys: ['g', 's'], href: '/entities?tab=sociedades', label: 'Ir a Sociedades' },
