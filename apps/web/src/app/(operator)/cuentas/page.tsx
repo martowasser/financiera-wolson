@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@/lib/hooks';
+import { formatApiError } from '@/lib/api-errors';
 import { formatMoney } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -141,7 +142,7 @@ function CuentaFormDialog({ open, onClose, onSaved }: { open: boolean; onClose: 
       setName(''); setIdentifier(''); setNotes('');
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Error al crear');
+      toast.error(formatApiError(e, 'Error al crear'));
     }
   }
 

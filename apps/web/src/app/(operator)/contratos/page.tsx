@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery, useMutation } from '@/lib/hooks';
+import { formatApiError } from '@/lib/api-errors';
 import { formatMoney, formatDate, inputToCentavos } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -161,7 +162,7 @@ function ContratoNewDialog({ open, onClose, onSaved }: { open: boolean; onClose:
       setPropiedadId(''); setInquilinoId(''); setMonto(''); setFechaFin(''); setNotes('');
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Error');
+      toast.error(formatApiError(e));
     }
   }
 

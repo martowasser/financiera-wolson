@@ -10,6 +10,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Wallet, Building2, Plus, CalendarCheck } from 'lucide-react';
 import { label, movimientoTipoLabels, estadoDelMesLabels } from '@/lib/labels';
+import { CajaCerradaBanner } from '@/components/caja-cerrada-banner';
 
 type CajaToday = {
   id: string;
@@ -62,6 +63,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <CajaCerradaBanner />
+
       <PageHeader
         title="Dashboard"
         description={`Hoy: ${formatDate(today)}`}

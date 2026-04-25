@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@/lib/hooks';
+import { formatApiError } from '@/lib/api-errors';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -173,7 +174,7 @@ function PropiedadFormDialog({
       setSociedadId(''); setNombre(''); setDireccion(''); setDescripcion(''); setNotes('');
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Error al crear');
+      toast.error(formatApiError(e, 'Error al crear'));
     }
   }
 

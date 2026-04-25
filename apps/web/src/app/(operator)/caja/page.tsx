@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation } from '@/lib/hooks';
 import { apiFetch } from '@/lib/api';
+import { formatApiError } from '@/lib/api-errors';
 import { formatMoney, formatDate, formatDateLong, formatDateTime } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Plus, CalendarCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { label, movimientoTipoLabels, cajaStatusLabels } from '@/lib/labels';
+import { CajaCerradaBanner } from '@/components/caja-cerrada-banner';
 
 type Caja = {
   id: string;
@@ -55,6 +57,8 @@ export default function CajaPage() {
 
   return (
     <div className="space-y-6">
+      <CajaCerradaBanner />
+
       <PageHeader
         title="Caja"
         description={today ? formatDateLong(today.fecha) : '—'}
@@ -205,7 +209,7 @@ function CerrarDialog({ caja, open, onClose, onSaved }: { caja: Caja; open: bool
       toast.success('Caja cerrada');
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Error');
+      toast.error(formatApiError(e));
     } finally {
       setLoading(false);
     }

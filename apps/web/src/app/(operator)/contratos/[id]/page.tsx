@@ -3,6 +3,7 @@
 import { use, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation } from '@/lib/hooks';
+import { formatApiError } from '@/lib/api-errors';
 import { formatMoney, formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -164,7 +165,7 @@ function SociosSection({ contrato, cuentas, onChange }: { contrato: Contrato; cu
       toast.success('Socios actualizados');
       onChange();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Error');
+      toast.error(formatApiError(e));
     }
   }
 
@@ -227,7 +228,7 @@ function FinalizarDialog({ contratoId, open, onClose, onSaved }: { contratoId: s
       toast.success('Contrato finalizado');
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Error');
+      toast.error(formatApiError(e));
     }
   }
 

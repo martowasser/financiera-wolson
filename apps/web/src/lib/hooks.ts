@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { apiFetch, ApiError } from './api';
+import { apiFetch } from './api';
+import { formatApiError } from './api-errors';
 
 type UseQueryResult<T> = {
   data: T | null;
@@ -32,7 +33,7 @@ export function useQuery<T>(
     setError(null);
     apiFetch<T>(path, { params })
       .then((d) => { if (!cancelled) setData(d); })
-      .catch((e) => { if (!cancelled) setError(e instanceof ApiError ? e.message : 'Error de conexión'); })
+      .catch((e) => { if (!cancelled) setError(formatApiError(e, 'Error de conexión')); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -63,8 +64,7 @@ export function useMutation<TInput = unknown, TOutput = unknown>(
       const result = await apiFetch<TOutput>(path, { method, body: input });
       return result;
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : 'Error de conexión';
-      setError(msg);
+      setError(formatApiError(e, 'Error de conexión'));
       throw e;
     } finally {
       setIsLoading(false);

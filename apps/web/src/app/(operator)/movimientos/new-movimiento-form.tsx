@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@/lib/hooks';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, ApiError } from '@/lib/api';
+import { formatApiError } from '@/lib/api-errors';
 import { inputToCentavos } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +32,6 @@ const RULES: Record<string, {
   allowContraparte?: boolean;
 }> = {
   ALQUILER_COBRO:    { flow: 'I', destinoAllowed: ['CAJA', 'BANCO'], requireContrato: true },
-  ALQUILER_PAGO:     { flow: 'E', origenAllowed: ['CAJA', 'BANCO'], requireContrato: true },
   GASTO:             { flow: 'E', origenAllowed: ['CAJA', 'BANCO', 'CUENTA_CORRIENTE'], allowContraparte: true },
   GASTO_SOCIEDAD:    { flow: 'E', origenAllowed: ['CAJA', 'BANCO'], requireSociedad: true },
   GASTO_PROPIEDAD:   { flow: 'E', origenAllowed: ['CAJA', 'BANCO'], requirePropiedad: true },
@@ -78,10 +78,29 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
   const { data: propiedades } = useQuery<Propiedad[]>('/propiedades', { active: 'true' });
   const { data: contratos } = useQuery<Contrato[]>('/contratos', { status: 'ACTIVO' });
 
+  // Pre-flight: comprobar si la caja del día elegido está cerrada para avisar antes
+  // del submit. NONE = caja todavía no existe (la creará el backend en el POST).
+  const [cajaCheck, setCajaCheck] = useState<'CHECKING' | 'OPEN' | 'CLOSED' | 'NONE'>('NONE');
+  useEffect(() => {
+    if (!fecha) return;
+    let cancelled = false;
+    setCajaCheck('CHECKING');
+    apiFetch<{ status: 'OPEN' | 'CLOSED' }>(`/caja/${fecha}`)
+      .then((c) => { if (!cancelled) setCajaCheck(c.status); })
+      .catch((e) => {
+        if (cancelled) return;
+        // 404 = caja inexistente (válido — el backend la crea al POSTear el mov).
+        if (e instanceof ApiError && e.code === 'NOT_FOUND') setCajaCheck('NONE');
+        else setCajaCheck('NONE');
+      });
+    return () => { cancelled = true; };
+  }, [fecha]);
+
   const rule = tipo ? RULES[tipo] : null;
 
   const canSubmit = useMemo(() => {
     if (!rule) return false;
+    if (cajaCheck === 'CLOSED') return false;
     if (!monto.trim() || parseFloat(monto) <= 0) return false;
     if (rule.requireNotes && !notes.trim()) return false;
     if (rule.requireContrato && !contratoId) return false;
@@ -105,7 +124,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
       if (!origenBucket && !destinoBucket) return false;
     }
     return true;
-  }, [rule, monto, notes, contratoId, propiedadId, sociedadId, origenBucket, origenBancoId, origenCuentaId, destinoBucket, destinoBancoId, destinoCuentaId]);
+  }, [rule, cajaCheck, monto, notes, contratoId, propiedadId, sociedadId, origenBucket, origenBancoId, origenCuentaId, destinoBucket, destinoBancoId, destinoCuentaId]);
 
   async function submit() {
     if (!tipo || !rule) return;
@@ -139,7 +158,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
       toast.success(`Movimiento #${created.numero} registrado`);
       onSaved(created.numero);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Error');
+      toast.error(formatApiError(e));
     } finally {
       setSaving(false);
     }
@@ -195,7 +214,18 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-1">
           <Label>Fecha</Label>
-          <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+          <Input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            aria-invalid={cajaCheck === 'CLOSED'}
+            className={cajaCheck === 'CLOSED' ? 'border-red-500 focus-visible:ring-red-500' : undefined}
+          />
+          {cajaCheck === 'CLOSED' && (
+            <p className="text-xs text-red-600 mt-1">
+              Caja de esa fecha cerrada. Reabrila o usá otra fecha.
+            </p>
+          )}
         </div>
         <div className="col-span-1">
           <Label>Monto</Label>

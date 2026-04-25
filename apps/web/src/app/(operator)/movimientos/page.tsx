@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@/lib/hooks';
 import { apiFetch } from '@/lib/api';
+import { formatApiError } from '@/lib/api-errors';
 import { formatMoney, formatDate, formatDateTime } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -228,7 +229,7 @@ function DetailView({ mov, onChange }: {
       toast.success('Movimiento actualizado');
       onChange();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Error');
+      toast.error(formatApiError(e));
     } finally {
       setSavingEdit(false);
     }
@@ -306,7 +307,7 @@ function ReversarDialog({ movId, open, onClose, onSaved }: { movId: string; open
       toast.success('Movimiento reversado');
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Error');
+      toast.error(formatApiError(e));
     } finally {
       setSaving(false);
     }

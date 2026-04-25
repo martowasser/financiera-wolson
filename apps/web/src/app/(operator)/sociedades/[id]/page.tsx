@@ -3,6 +3,7 @@
 import { use, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation } from '@/lib/hooks';
+import { formatApiError } from '@/lib/api-errors';
 import { formatMoney, formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -111,7 +112,7 @@ function BancoSection({ sociedad, onChange }: { sociedad: Sociedad; onChange: ()
       setNombre(''); setNumero(''); setCreating(false);
       onChange();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Error');
+      toast.error(formatApiError(e));
     }
   }
 
@@ -200,7 +201,7 @@ function SociosSection({ sociedad, cuentas, onChange }: { sociedad: Sociedad; cu
       toast.success('Socios actualizados');
       onChange();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Error');
+      toast.error(formatApiError(e));
     }
   }
 
