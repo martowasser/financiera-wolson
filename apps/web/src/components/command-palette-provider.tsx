@@ -32,17 +32,13 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
 
   const navChordShortcuts: Shortcut[] = useMemo(() => {
     const chords: { keys: [string, string]; href: string; label: string; tentative?: boolean }[] = [
-      { keys: ['g', 'd'], href: '/dashboard', label: 'Ir a Resumen' },
-      { keys: ['g', 'm'], href: '/transactions', label: 'Ir a Movimientos' },
-      { keys: ['g', 'c'], href: '/period', label: 'Ir a Cierre de Caja', tentative: true },
-      { keys: ['g', 's'], href: '/entities?tab=sociedades', label: 'Ir a Sociedades' },
-      { keys: ['g', 'n'], href: '/entities?tab=personas', label: 'Ir a Personas' },
-      { keys: ['g', 'u'], href: '/accounts', label: 'Ir a Cuentas' },
-      { keys: ['g', 'p'], href: '/properties', label: 'Ir a Propiedades' },
-      { keys: ['g', 'r'], href: '/leases', label: 'Ir a Alquileres' },
-      { keys: ['g', 'i'], href: '/invoices', label: 'Ir a Cobro Alquileres' },
-      { keys: ['g', 'x'], href: '/settlements', label: 'Ir a Distribución a Socios' },
-      { keys: ['g', 'o'], href: '/reconciliation', label: 'Ir a Conciliación' },
+      { keys: ['g', 'd'], href: '/dashboard',   label: 'Ir a Resumen' },
+      { keys: ['g', 'm'], href: '/movimientos', label: 'Ir a Movimientos' },
+      { keys: ['g', 'c'], href: '/caja',        label: 'Ir a Caja' },
+      { keys: ['g', 's'], href: '/sociedades',  label: 'Ir a Sociedades' },
+      { keys: ['g', 'u'], href: '/cuentas',     label: 'Ir a Cuentas' },
+      { keys: ['g', 'p'], href: '/propiedades', label: 'Ir a Propiedades' },
+      { keys: ['g', 'r'], href: '/alquileres',  label: 'Ir a Alquileres' },
     ];
     return chords.map((c) => ({
       id: `chord-${c.keys.join('-')}`,
