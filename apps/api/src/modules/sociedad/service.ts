@@ -67,7 +67,7 @@ export async function getSociedad(id: string) {
     include: {
       socios: { include: { cuenta: true } },
       banco: true,
-      _count: { select: { propiedades: { where: { deletedAt: null } } } },
+      propiedades: { where: { deletedAt: null }, orderBy: { nombre: 'asc' } },
     },
   });
   if (!sociedad || sociedad.deletedAt) throw notFound('Sociedad no encontrada');
