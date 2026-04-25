@@ -33,7 +33,7 @@ type Propiedad = {
   descripcion: string | null;
   isActive: boolean;
   sociedad: { id: string; name: string };
-  _count: { contratos: number };
+  _count: { alquileres: number };
 };
 
 export default function PropiedadesPage() {
@@ -102,7 +102,7 @@ export default function PropiedadesPage() {
               <th className="px-3 py-2 text-left font-medium">Nombre</th>
               <th className="px-3 py-2 text-left font-medium">Dirección</th>
               <th className="px-3 py-2 text-left font-medium">Sociedad</th>
-              <th className="px-3 py-2 text-right font-medium"># Contratos</th>
+              <th className="px-3 py-2 text-right font-medium"># Alquileres</th>
               <th className="px-3 py-2 text-center font-medium">Estado</th>
             </tr>
           </thead>
@@ -120,7 +120,7 @@ export default function PropiedadesPage() {
                 </td>
                 <td className="px-3 py-2 text-muted-foreground">{p.direccion}</td>
                 <td className="px-3 py-2">{p.sociedad.name}</td>
-                <td className="px-3 py-2 text-right font-mono text-xs">{p._count.contratos}</td>
+                <td className="px-3 py-2 text-right font-mono text-xs">{p._count.alquileres}</td>
                 <td className="px-3 py-2 text-center">
                   {p.isActive
                     ? <Badge variant="outline">Activa</Badge>

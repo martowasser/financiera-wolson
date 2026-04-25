@@ -12,7 +12,7 @@ const socioInputSchema = z.object({
 // ISO date string (YYYY-MM-DD or full ISO); Postgres @db.Date truncates to day.
 const isoDateString = z.string().min(1);
 
-export const createContratoSchema = z.object({
+export const createAlquilerSchema = z.object({
   propiedadId: z.string(),
   inquilinoId: z.string(),
   monto: bigintString,
@@ -23,7 +23,7 @@ export const createContratoSchema = z.object({
   socios: z.array(socioInputSchema).optional(),
 });
 
-export const updateContratoSchema = z.object({
+export const updateAlquilerSchema = z.object({
   monto: bigintString.optional(),
   moneda: monedaSchema.optional(),
   fechaInicio: isoDateString.optional(),
@@ -31,16 +31,16 @@ export const updateContratoSchema = z.object({
   notes: nullishString,
 });
 
-export const replaceContratoSociosSchema = z.object({
+export const replaceAlquilerSociosSchema = z.object({
   socios: z.array(socioInputSchema),
 });
 
-export const finalizarContratoSchema = z.object({
+export const finalizarAlquilerSchema = z.object({
   finalizadoEn: isoDateString,
   motivoFinalizacion: z.string().min(1),
 });
 
-export const listContratosQuerySchema = z.object({
+export const listAlquileresQuerySchema = z.object({
   status: z.enum(['ACTIVO', 'FINALIZADO']).optional(),
   propiedadId: z.string().optional(),
   inquilinoId: z.string().optional(),
@@ -52,8 +52,8 @@ export const numeroParamSchema = z.object({
   numero: z.string().regex(/^\d+$/, 'must be an integer').transform((s) => parseInt(s, 10)),
 });
 
-export type CreateContratoInput = z.infer<typeof createContratoSchema>;
-export type UpdateContratoInput = z.infer<typeof updateContratoSchema>;
-export type ReplaceContratoSociosInput = z.infer<typeof replaceContratoSociosSchema>;
-export type FinalizarContratoInput = z.infer<typeof finalizarContratoSchema>;
-export type ListContratosQuery = z.infer<typeof listContratosQuerySchema>;
+export type CreateAlquilerInput = z.infer<typeof createAlquilerSchema>;
+export type UpdateAlquilerInput = z.infer<typeof updateAlquilerSchema>;
+export type ReplaceAlquilerSociosInput = z.infer<typeof replaceAlquilerSociosSchema>;
+export type FinalizarAlquilerInput = z.infer<typeof finalizarAlquilerSchema>;
+export type ListAlquileresQuery = z.infer<typeof listAlquileresQuerySchema>;

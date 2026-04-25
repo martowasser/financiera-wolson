@@ -1,11 +1,11 @@
 import prisma from '../../lib/prisma.js';
 import { notFound, unprocessable } from '../../lib/errors.js';
 import type {
-  CreateContratoInput,
-  UpdateContratoInput,
-  ReplaceContratoSociosInput,
-  FinalizarContratoInput,
-  ListContratosQuery,
+  CreateAlquilerInput,
+  UpdateAlquilerInput,
+  ReplaceAlquilerSociosInput,
+  FinalizarAlquilerInput,
+  ListAlquileresQuery,
 } from './schemas.js';
 import type { Prisma } from '@prisma/client';
 
@@ -17,7 +17,7 @@ function validateSocios(socios: SocioInput[]) {
     if (seen.has(s.cuentaId)) {
       throw unprocessable(
         `Cada cuenta puede aparecer una sola vez entre los socios (duplicada: ${s.cuentaId})`,
-        'CONTRATO_SOCIOS_DUPLICATE_CUENTA',
+        'ALQUILER_SOCIOS_DUPLICATE_CUENTA',
       );
     }
     seen.add(s.cuentaId);
@@ -26,7 +26,7 @@ function validateSocios(socios: SocioInput[]) {
   if (sum !== 10000) {
     throw unprocessable(
       `La suma de percentBps de los socios debe ser 10000 (100%); recibido ${sum}`,
-      'CONTRATO_SOCIOS_PERCENT_SUM_INVALID',
+      'ALQUILER_SOCIOS_PERCENT_SUM_INVALID',
     );
   }
 }
@@ -39,13 +39,13 @@ async function assertCuentasActive(socios: SocioInput[]) {
   if (cuentas.length !== socios.length) {
     throw unprocessable(
       'Al menos una de las cuentas indicadas como socio no existe o no está activa',
-      'CONTRATO_SOCIOS_CUENTA_INVALID',
+      'ALQUILER_SOCIOS_CUENTA_INVALID',
     );
   }
 }
 
-export async function listContratos(opts: ListContratosQuery) {
-  const where: Prisma.ContratoWhereInput = { deletedAt: null };
+export async function listAlquileres(opts: ListAlquileresQuery) {
+  const where: Prisma.AlquilerWhereInput = { deletedAt: null };
   if (opts.status) where.status = opts.status;
   if (opts.propiedadId) where.propiedadId = opts.propiedadId;
   if (opts.inquilinoId) where.inquilinoId = opts.inquilinoId;
@@ -57,7 +57,7 @@ export async function listContratos(opts: ListContratosQuery) {
       { propiedad: { nombre: { contains: opts.q, mode: 'insensitive' } } },
     ];
   }
-  return prisma.contrato.findMany({
+  return prisma.alquiler.findMany({
     where,
     orderBy: [{ status: 'asc' }, { fechaInicio: 'desc' }],
     include: {
@@ -75,8 +75,8 @@ export async function listContratos(opts: ListContratosQuery) {
   });
 }
 
-export async function getContrato(id: string) {
-  const contrato = await prisma.contrato.findUnique({
+export async function getAlquiler(id: string) {
+  const alquiler = await prisma.alquiler.findUnique({
     where: { id },
     include: {
       propiedad: {
@@ -89,12 +89,12 @@ export async function getContrato(id: string) {
       },
     },
   });
-  if (!contrato || contrato.deletedAt) throw notFound('Contrato no encontrado');
-  return contrato;
+  if (!alquiler || alquiler.deletedAt) throw notFound('Alquiler no encontrado');
+  return alquiler;
 }
 
-export async function getContratoByNumero(numero: number) {
-  const contrato = await prisma.contrato.findUnique({
+export async function getAlquilerByNumero(numero: number) {
+  const alquiler = await prisma.alquiler.findUnique({
     where: { numero },
     include: {
       propiedad: {
@@ -107,11 +107,11 @@ export async function getContratoByNumero(numero: number) {
       },
     },
   });
-  if (!contrato || contrato.deletedAt) throw notFound('Contrato no encontrado');
-  return contrato;
+  if (!alquiler || alquiler.deletedAt) throw notFound('Alquiler no encontrado');
+  return alquiler;
 }
 
-export async function createContrato(input: CreateContratoInput) {
+export async function createAlquiler(input: CreateAlquilerInput) {
   // Validate parent propiedad exists, not soft-deleted; load its sociedad socios for the default copy.
   const propiedad = await prisma.propiedad.findUnique({
     where: { id: input.propiedadId },
@@ -129,7 +129,7 @@ export async function createContrato(input: CreateContratoInput) {
   }
 
   // Pre-fill socios from the propiedad's sociedad when caller omits them — matches how Mariana
-  // usually wants the contract to mirror the sociedad's ownership split.
+  // usually wants the alquiler to mirror the sociedad's ownership split.
   const sociosToCreate: SocioInput[] =
     input.socios && input.socios.length > 0
       ? input.socios
@@ -137,8 +137,8 @@ export async function createContrato(input: CreateContratoInput) {
 
   if (sociosToCreate.length === 0) {
     throw unprocessable(
-      'No hay socios para asignar al contrato (ni se pasaron, ni la sociedad los tiene)',
-      'CONTRATO_SOCIOS_EMPTY',
+      'No hay socios para asignar al alquiler (ni se pasaron, ni la sociedad los tiene)',
+      'ALQUILER_SOCIOS_EMPTY',
     );
   }
 
@@ -146,7 +146,7 @@ export async function createContrato(input: CreateContratoInput) {
   await assertCuentasActive(sociosToCreate);
 
   return prisma.$transaction(async (tx) => {
-    const contrato = await tx.contrato.create({
+    const alquiler = await tx.alquiler.create({
       data: {
         propiedadId: input.propiedadId,
         inquilinoId: input.inquilinoId,
@@ -157,15 +157,15 @@ export async function createContrato(input: CreateContratoInput) {
         notes: input.notes ?? null,
       },
     });
-    await tx.contratoSocio.createMany({
+    await tx.alquilerSocio.createMany({
       data: sociosToCreate.map((s) => ({
-        contratoId: contrato.id,
+        alquilerId: alquiler.id,
         cuentaId: s.cuentaId,
         percentBps: s.percentBps,
       })),
     });
-    return tx.contrato.findUniqueOrThrow({
-      where: { id: contrato.id },
+    return tx.alquiler.findUniqueOrThrow({
+      where: { id: alquiler.id },
       include: {
         propiedad: { include: { sociedad: { select: { id: true, name: true } } } },
         inquilino: true,
@@ -175,9 +175,9 @@ export async function createContrato(input: CreateContratoInput) {
   });
 }
 
-export async function updateContrato(id: string, input: UpdateContratoInput) {
-  await getContrato(id);
-  const data: Prisma.ContratoUpdateInput = {};
+export async function updateAlquiler(id: string, input: UpdateAlquilerInput) {
+  await getAlquiler(id);
+  const data: Prisma.AlquilerUpdateInput = {};
   if (input.monto !== undefined) data.monto = input.monto;
   if (input.moneda !== undefined) data.moneda = input.moneda;
   if (input.fechaInicio !== undefined) data.fechaInicio = new Date(input.fechaInicio);
@@ -185,7 +185,7 @@ export async function updateContrato(id: string, input: UpdateContratoInput) {
     data.fechaFin = input.fechaFin ? new Date(input.fechaFin) : null;
   }
   if (input.notes !== undefined) data.notes = input.notes ?? null;
-  return prisma.contrato.update({
+  return prisma.alquiler.update({
     where: { id },
     data,
     include: {
@@ -196,20 +196,20 @@ export async function updateContrato(id: string, input: UpdateContratoInput) {
   });
 }
 
-export async function replaceContratoSocios(id: string, input: ReplaceContratoSociosInput) {
-  await getContrato(id);
+export async function replaceAlquilerSocios(id: string, input: ReplaceAlquilerSociosInput) {
+  await getAlquiler(id);
   validateSocios(input.socios);
   await assertCuentasActive(input.socios);
   return prisma.$transaction(async (tx) => {
-    await tx.contratoSocio.deleteMany({ where: { contratoId: id } });
-    await tx.contratoSocio.createMany({
+    await tx.alquilerSocio.deleteMany({ where: { alquilerId: id } });
+    await tx.alquilerSocio.createMany({
       data: input.socios.map((s) => ({
-        contratoId: id,
+        alquilerId: id,
         cuentaId: s.cuentaId,
         percentBps: s.percentBps,
       })),
     });
-    return tx.contrato.findUniqueOrThrow({
+    return tx.alquiler.findUniqueOrThrow({
       where: { id },
       include: {
         propiedad: { include: { sociedad: { select: { id: true, name: true } } } },
@@ -220,12 +220,12 @@ export async function replaceContratoSocios(id: string, input: ReplaceContratoSo
   });
 }
 
-export async function finalizarContrato(id: string, input: FinalizarContratoInput) {
-  const existing = await getContrato(id);
+export async function finalizarAlquiler(id: string, input: FinalizarAlquilerInput) {
+  const existing = await getAlquiler(id);
   if (existing.status === 'FINALIZADO') {
-    throw unprocessable('El contrato ya está finalizado', 'CONTRATO_YA_FINALIZADO');
+    throw unprocessable('El alquiler ya está finalizado', 'ALQUILER_YA_FINALIZADO');
   }
-  return prisma.contrato.update({
+  return prisma.alquiler.update({
     where: { id },
     data: {
       status: 'FINALIZADO',
@@ -235,12 +235,12 @@ export async function finalizarContrato(id: string, input: FinalizarContratoInpu
   });
 }
 
-export async function reactivarContrato(id: string) {
-  const existing = await getContrato(id);
+export async function reactivarAlquiler(id: string) {
+  const existing = await getAlquiler(id);
   if (existing.status === 'ACTIVO') {
-    throw unprocessable('El contrato ya está activo', 'CONTRATO_YA_ACTIVO');
+    throw unprocessable('El alquiler ya está activo', 'ALQUILER_YA_ACTIVO');
   }
-  return prisma.contrato.update({
+  return prisma.alquiler.update({
     where: { id },
     data: {
       status: 'ACTIVO',
@@ -250,17 +250,17 @@ export async function reactivarContrato(id: string) {
   });
 }
 
-export async function deleteContrato(id: string) {
-  await getContrato(id);
-  // Preserve movement history: if any movimiento references this contrato we refuse to soft-delete.
-  const movimientos = await prisma.movimiento.count({ where: { contratoId: id } });
+export async function deleteAlquiler(id: string) {
+  await getAlquiler(id);
+  // Preserve movement history: if any movimiento references this alquiler we refuse to soft-delete.
+  const movimientos = await prisma.movimiento.count({ where: { alquilerId: id } });
   if (movimientos > 0) {
     throw unprocessable(
-      'No se puede eliminar: el contrato tiene movimientos asociados',
-      'CONTRATO_HAS_MOVIMIENTOS',
+      'No se puede eliminar: el alquiler tiene movimientos asociados',
+      'ALQUILER_HAS_MOVIMIENTOS',
     );
   }
-  return prisma.contrato.update({
+  return prisma.alquiler.update({
     where: { id },
     data: { deletedAt: new Date() },
   });

@@ -24,12 +24,12 @@ Se tiraron Entity, Account, Transaction, Entry, Period, Ownership, Property, Lea
 - `Sociedad` + `SociedadSocio` (bps==10000)
 - `Banco` (1:1 con sociedad, saldos ARS+USD)
 - `Propiedad`
-- `Contrato` + `ContratoSocio` (socios pre-llenados desde sociedad, editables). `numero` desde 1000
+- `Alquiler` + `AlquilerSocio` (socios pre-llenados desde sociedad, editables). `numero` desde 1000
 - `CajaDia` (singleton por fecha, arrastra saldos)
 - `Movimiento` (`origenBucket` + `destinoBucket`: CAJA | BANCO | CUENTA_CORRIENTE). `numero` desde 1000
 - `AuditLog` (genérico before/after — **no escrito por ningún módulo aún**)
 
-Migraciones fresh: `20260424200210_rebuild_modelo_mariana` + `20260424200211_numero_sequences_start_1000`.
+Migración fresh: `initial_schema` (squashed tras rename Contrato→Alquiler, 2026-04-24).
 
 ### Módulos backend
 
@@ -40,7 +40,7 @@ Migraciones fresh: `20260424200210_rebuild_modelo_mariana` + `20260424200211_num
 | `/api/sociedades` | sociedad — CRUD + `POST /:id/socios` (reemplaza, suma==10000) |
 | `/api/bancos` | banco — CRUD + cerrar/reabrir + admin `POST /:id/recalcular-saldo` |
 | `/api/propiedades` | propiedad — CRUD |
-| `/api/contratos` | contrato — CRUD + socios + finalizar + admin reactivar |
+| `/api/alquileres` | alquiler — CRUD + socios + finalizar + admin reactivar |
 | `/api/caja` | caja — today auto-create, cerrar (crea día siguiente), admin reabrir |
 | `/api/movimientos` | movimiento — POST con flow rules per-tipo, reversar, PUT notes/comprobante/facturado |
 | `/api/reports` | reporting — `/posicion`, `/alquileres`, `/caja/:fecha/resumen` |
@@ -48,7 +48,7 @@ Migraciones fresh: `20260424200210_rebuild_modelo_mariana` + `20260424200211_num
 Eliminados: account, entity, ownership, period, ledger, property, lease, invoice, settlement, reconciliation, reporting viejo, sociedad-member.
 
 ### UI operator — 7 pantallas en `apps/web/src/app/(operator)/`
-`/dashboard`, `/cuentas` + `[id]`, `/sociedades` + `[id]`, `/propiedades` + `[id]`, `/contratos` + `[id]`, `/caja` + `[fecha]`, `/movimientos`.
+`/dashboard`, `/cuentas` + `[id]`, `/sociedades` + `[id]`, `/propiedades` + `[id]`, `/alquileres` + `[id]`, `/caja` + `[fecha]`, `/movimientos`.
 
 Movimientos es el core — modal con flow rules mirrored del server (I/E/T/F) y etiquetas "De dónde sale" / "A dónde va". **Sin "débito"/"crédito".** Cmd+K + sidebar reapuntados.
 
@@ -74,13 +74,13 @@ Cambió a `value.toString()` en `apps/api/src/{index,build-app}.ts`. El frontend
 ### Smoke tests (apps/api/src/smoke.test.ts — 14 tests, 100% pass)
 Se escribieron smoke tests de integración cubriendo el happy path de la demo y las reglas críticas:
 - Flujo completo: alquiler cobro al banco, transfer banco→caja, gasto propiedad, transfer banco→CC (anticipo a socio).
-- Contrato FINALIZADO rechaza cobro posterior con code `CONTRATO_FINALIZADO_FECHA_POSTERIOR`.
+- Alquiler FINALIZADO rechaza cobro posterior con code `ALQUILER_FINALIZADO_FECHA_POSTERIOR`.
 - Sociedad.replaceSocios valida suma bps==10000 (rechaza con 422).
 - Reverso invierte saldos; doble-reverso sobre el mismo original se rechaza.
 - Caja CLOSED rechaza movimiento nuevo (`CAJA_CLOSED`).
 - Caja cerrar arrastra saldos al día siguiente.
 - Reports/posición reparte saldo de banco entre socios según bps.
-- Contrato.POST pre-llena socios desde la sociedad si no se pasan.
+- Alquiler.POST pre-llena socios desde la sociedad si no se pasan.
 - Alquileres report marca `PENDIENTE` cuando no hubo cobro este mes.
 - Banco 1:1 con sociedad (segundo banco → 409 `BANCO_ALREADY_EXISTS_FOR_SOCIEDAD`).
 - BigInt serializa como string (no Number) para preservar precisión.
@@ -94,23 +94,23 @@ Se ejecutó el flujo descrito en la sección "Verificación manual" del plan, de
 3. Crear sociedad DA con socios 50/50 OK.
 4. Crear banco 042 para DA OK.
 5. Crear propiedad Av. Mayo 123 4B bajo DA OK.
-6. Crear contrato sobre esa propiedad por 100k ARS → contrato **#1000** (sequence start verificado).
+6. Crear alquiler sobre esa propiedad por 100k ARS → alquiler **#1000** (sequence start verificado).
 7. ALQUILER_COBRO 100k → Banco DA saldo 10,000,000 ✓.
 8. TRANSFERENCIA 50k Banco→Caja → Banco 5,000,000, Caja 5,000,000 ✓.
 9. GASTO_PROPIEDAD 10k desde Banco → Banco 4,000,000 ✓.
 10. TRANSFERENCIA 5k Banco→CC Alberto → CC Alberto 500,000, Banco 3,500,000 ✓.
 11. Cerrar caja → saldoFinalArs 5,000,000 ✓.
 12. /reports/posicion → Alberto corresponde 1,750,000 (50% de 3.5M), Casab 1,750,000 ✓.
-13. Finalizar contrato #1000 con motivo ✓.
-14. ALQUILER_COBRO con fecha futura → HTTP 409 `CONTRATO_FINALIZADO_FECHA_POSTERIOR` ✓.
+13. Finalizar alquiler #1000 con motivo ✓.
+14. ALQUILER_COBRO con fecha futura → HTTP 409 `ALQUILER_FINALIZADO_FECHA_POSTERIOR` ✓.
 
-Todas las pantallas operator renderizan SSR con HTTP 200 (`/login`, `/dashboard`, `/cuentas`, `/sociedades`, `/propiedades`, `/contratos`, `/caja`, `/movimientos`). **No se hizo click-through visual en browser** — hay que hacerlo antes de la demo con Mariana para validar interacciones del form de movimiento.
+Todas las pantallas operator renderizan SSR con HTTP 200 (`/login`, `/dashboard`, `/cuentas`, `/sociedades`, `/propiedades`, `/alquileres`, `/caja`, `/movimientos`). **No se hizo click-through visual en browser** — hay que hacerlo antes de la demo con Mariana para validar interacciones del form de movimiento.
 
 ### Deuda técnica (Fase 4)
-- **Tests backend ampliados.** Hay 14 smoke tests de integración. Faltan: concurrencia (5 inserts paralelos al mismo banco saldo), propiedades específicas como soft-delete con dependencias, admin-only endpoints (reactivar contrato, recalcular saldo, reabrir caja).
+- **Tests backend ampliados.** Hay 14 smoke tests de integración. Faltan: concurrencia (5 inserts paralelos al mismo banco saldo), propiedades específicas como soft-delete con dependencias, admin-only endpoints (reactivar alquiler, recalcular saldo, reabrir caja).
 - **AuditLog** no se escribe. Decidir: hook Fastify global vs. por-service.
-- **Edit modals** de datos básicos no conectados en detail pages de cuenta/sociedad/propiedad/contrato (socios sí; el resto no). Endpoints PUT existen.
-- **Reactivar contrato** / **recalcular banco** — endpoints admin existen, no hay UI.
+- **Edit modals** de datos básicos no conectados en detail pages de cuenta/sociedad/propiedad/alquiler (socios sí; el resto no). Endpoints PUT existen.
+- **Reactivar alquiler** / **recalcular banco** — endpoints admin existen, no hay UI.
 - **Conciliación bancaria** fuera de scope; Phase 6 opcional del plan no implementada.
 - **Serializable isolation** solo en `movimiento.create`/`reversar`.
 
@@ -126,7 +126,7 @@ Todas las pantallas operator renderizan SSR con HTTP 200 (`/login`, `/dashboard`
 - Prisma 6 con schema modular (14 archivos .prisma)
 - Docker Compose con PostgreSQL 16 (dev en puerto 5434, test en puerto 5435)
 - Primera migración con todas las tablas + trigger de validación de doble entrada
-- Seed con datos realistas: la financiera, 2 sociedades (DA S.A., MR Inversiones), socios con porcentajes, 10 entidades, 15 cuentas, 4 propiedades, 4 contratos de alquiler, 3 transacciones de ejemplo
+- Seed con datos realistas: la financiera, 2 sociedades (DA S.A., MR Inversiones), socios con porcentajes, 10 entidades, 15 cuentas, 4 propiedades, 4 alquileres, 3 transacciones de ejemplo
 
 **Módulos implementados (12):**
 
@@ -204,8 +204,8 @@ Todas las pantallas operator renderizan SSR con HTTP 200 (`/login`, `/dashboard`
 | **Entidades** | `/entities` | CRUD + detalle con Ownership: agregar socios, porcentajes, validación suma 100%, historial |
 | **Cuentas** | `/accounts` | CRUD, vista lista con filtros, vista jerarquía (árbol), saldos en tiempo real |
 | **Propiedades** | `/properties` | CRUD con datos físicos, tipo (departamento/comercial/oficina/etc), entidad propietaria |
-| **Contratos** | `/leases` | CRUD de Lease + detalle con historial de precios (LeasePrice). Soporte DIRECT y THIRD_PARTY |
-| **Cobro de alquileres** | `/invoices` | Crear Invoice (contrato + base + IVA + retenciones flexibles) → registrar cobro con medio de pago → transacción automática |
+| **Alquileres** | `/leases` | CRUD de Lease + detalle con historial de precios (LeasePrice). Soporte DIRECT y THIRD_PARTY |
+| **Cobro de alquileres** | `/invoices` | Crear Invoice (alquiler + base + IVA + retenciones flexibles) → registrar cobro con medio de pago → transacción automática |
 | **Liquidaciones** | `/settlements` | Seleccionar sociedad + período + moneda → calcular distribución → ver preview → aprobar |
 | **Conciliación bancaria** | `/reconciliation` | Vista split-screen: items del banco (izquierda) vs transacciones del sistema (derecha). Agregar items, match manual, globalización (agrupar N items), color coding (verde=conciliado, amarillo=agrupado), barra de progreso, completar |
 

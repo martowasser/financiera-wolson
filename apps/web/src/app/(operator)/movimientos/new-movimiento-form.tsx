@@ -24,14 +24,14 @@ const RULES: Record<string, {
   flow: Flow;
   origenAllowed?: Bucket[];
   destinoAllowed?: Bucket[];
-  requireContrato?: boolean;
+  requireAlquiler?: boolean;
   requirePropiedad?: boolean;
   requireSociedad?: boolean;
   requireBancoOrigen?: boolean;
   requireNotes?: boolean;
   allowContraparte?: boolean;
 }> = {
-  ALQUILER_COBRO:    { flow: 'I', destinoAllowed: ['CAJA', 'BANCO'], requireContrato: true },
+  ALQUILER_COBRO:    { flow: 'I', destinoAllowed: ['CAJA', 'BANCO'], requireAlquiler: true },
   GASTO:             { flow: 'E', origenAllowed: ['CAJA', 'BANCO', 'CUENTA_CORRIENTE'], allowContraparte: true },
   GASTO_SOCIEDAD:    { flow: 'E', origenAllowed: ['CAJA', 'BANCO'], requireSociedad: true },
   GASTO_PROPIEDAD:   { flow: 'E', origenAllowed: ['CAJA', 'BANCO'], requirePropiedad: true },
@@ -50,7 +50,7 @@ type Banco = { id: string; nombre: string; numero: string };
 type Cuenta = { id: string; name: string; identifier: string | null };
 type Sociedad = { id: string; name: string };
 type Propiedad = { id: string; nombre: string; direccion: string };
-type Contrato = { id: string; numero: number; propiedad: { nombre: string }; inquilino: { name: string } };
+type Alquiler = { id: string; numero: number; propiedad: { nombre: string }; inquilino: { name: string } };
 
 export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: number) => void; onCancel: () => void }) {
   const [tipo, setTipo] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
   const [destinoCuentaId, setDestinoCuentaId] = useState('');
   const [sociedadId, setSociedadId] = useState('');
   const [propiedadId, setPropiedadId] = useState('');
-  const [contratoId, setContratoId] = useState('');
+  const [alquilerId, setAlquilerId] = useState('');
   const [cuentaContraparteId, setCuentaContraparteId] = useState('');
   const [comprobante, setComprobante] = useState('');
   const [facturado, setFacturado] = useState(false);
@@ -76,7 +76,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
   const { data: cuentas } = useQuery<Cuenta[]>('/cuentas', { active: 'true' });
   const { data: sociedades } = useQuery<Sociedad[]>('/sociedades');
   const { data: propiedades } = useQuery<Propiedad[]>('/propiedades', { active: 'true' });
-  const { data: contratos } = useQuery<Contrato[]>('/contratos', { status: 'ACTIVO' });
+  const { data: alquileres } = useQuery<Alquiler[]>('/alquileres', { status: 'ACTIVO' });
 
   // Pre-flight: comprobar si la caja del día elegido está cerrada para avisar antes
   // del submit. NONE = caja todavía no existe (la creará el backend en el POST).
@@ -103,7 +103,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
     if (cajaCheck === 'CLOSED') return false;
     if (!monto.trim() || parseFloat(monto) <= 0) return false;
     if (rule.requireNotes && !notes.trim()) return false;
-    if (rule.requireContrato && !contratoId) return false;
+    if (rule.requireAlquiler && !alquilerId) return false;
     if (rule.requirePropiedad && !propiedadId) return false;
     if (rule.requireSociedad && !sociedadId) return false;
     if (rule.flow === 'I') {
@@ -124,7 +124,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
       if (!origenBucket && !destinoBucket) return false;
     }
     return true;
-  }, [rule, cajaCheck, monto, notes, contratoId, propiedadId, sociedadId, origenBucket, origenBancoId, origenCuentaId, destinoBucket, destinoBancoId, destinoCuentaId]);
+  }, [rule, cajaCheck, monto, notes, alquilerId, propiedadId, sociedadId, origenBucket, origenBancoId, origenCuentaId, destinoBucket, destinoBancoId, destinoCuentaId]);
 
   async function submit() {
     if (!tipo || !rule) return;
@@ -148,7 +148,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
       }
       if (sociedadId) body.sociedadId = sociedadId;
       if (propiedadId) body.propiedadId = propiedadId;
-      if (contratoId) body.contratoId = contratoId;
+      if (alquilerId) body.alquilerId = alquilerId;
       if (cuentaContraparteId) body.cuentaContraparteId = cuentaContraparteId;
       if (comprobante.trim()) body.comprobante = comprobante.trim();
       if (facturado) body.facturado = true;
@@ -301,13 +301,13 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
         </div>
       )}
 
-      {rule!.requireContrato && (
+      {rule!.requireAlquiler && (
         <div>
-          <Label>Contrato</Label>
-          <select value={contratoId} onChange={(e) => setContratoId(e.target.value)}
+          <Label>Alquiler</Label>
+          <select value={alquilerId} onChange={(e) => setAlquilerId(e.target.value)}
             className="flex h-9 w-full rounded-md border bg-background px-3 text-sm">
-            <option value="">Seleccionar contrato…</option>
-            {(contratos ?? []).map((c) => (
+            <option value="">Seleccionar alquiler…</option>
+            {(alquileres ?? []).map((c) => (
               <option key={c.id} value={c.id}>#{c.numero} · {c.propiedad.nombre} · {c.inquilino.name}</option>
             ))}
           </select>

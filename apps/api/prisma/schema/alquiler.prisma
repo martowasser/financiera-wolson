@@ -1,7 +1,7 @@
-// Contrato de alquiler. Pertenece a una propiedad. Tiene sus propios socios con %.
+// Alquiler. Pertenece a una propiedad. Tiene sus propios socios con %.
 // Al crear, socios se pre-llenan con los de la sociedad; Mariana puede editarlos.
 // `numero` es incremental (secuencia arranca en 1000 en migración).
-model Contrato {
+model Alquiler {
   id                 String         @id @default(cuid())
   numero             Int            @unique @default(autoincrement())
   propiedadId        String
@@ -10,7 +10,7 @@ model Contrato {
   moneda             Moneda
   fechaInicio        DateTime       @db.Date
   fechaFin           DateTime?      @db.Date
-  status             ContratoStatus @default(ACTIVO)
+  status             AlquilerStatus @default(ACTIVO)
   finalizadoEn       DateTime?      @db.Date
   motivoFinalizacion String?
   notes              String?
@@ -19,8 +19,8 @@ model Contrato {
   deletedAt          DateTime?
 
   propiedad   Propiedad       @relation(fields: [propiedadId], references: [id])
-  inquilino   Cuenta          @relation("ContratoInquilino", fields: [inquilinoId], references: [id])
-  socios      ContratoSocio[]
+  inquilino   Cuenta          @relation("AlquilerInquilino", fields: [inquilinoId], references: [id])
+  socios      AlquilerSocio[]
   movimientos Movimiento[]
 
   @@index([status])
@@ -30,7 +30,7 @@ model Contrato {
   @@index([numero])
 }
 
-enum ContratoStatus {
+enum AlquilerStatus {
   ACTIVO
   FINALIZADO
 }
@@ -40,19 +40,19 @@ enum Moneda {
   USD
 }
 
-// Socios del contrato con %. Suma percentBps == 10000.
-model ContratoSocio {
+// Socios del alquiler con %. Suma percentBps == 10000.
+model AlquilerSocio {
   id         String   @id @default(cuid())
-  contratoId String
+  alquilerId String
   cuentaId   String
   percentBps Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  contrato Contrato @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  alquiler Alquiler @relation(fields: [alquilerId], references: [id], onDelete: Cascade)
   cuenta   Cuenta   @relation(fields: [cuentaId], references: [id])
 
-  @@unique([contratoId, cuentaId])
-  @@index([contratoId])
+  @@unique([alquilerId, cuentaId])
+  @@index([alquilerId])
   @@index([cuentaId])
 }

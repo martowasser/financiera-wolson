@@ -15,11 +15,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { label, movimientoTipoLabels, contratoStatusLabels } from '@/lib/labels';
+import { label, movimientoTipoLabels, alquilerStatusLabels } from '@/lib/labels';
 
 type Cuenta = { id: string; name: string; identifier: string | null };
 
-type Contrato = {
+type Alquiler = {
   id: string;
   numero: number;
   monto: string;
@@ -45,10 +45,10 @@ type Movimiento = {
   notes: string | null;
 };
 
-export default function ContratoDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AlquilerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data: c, refetch } = useQuery<Contrato>(`/contratos/${id}`);
-  const { data: movs } = useQuery<Movimiento[]>('/movimientos', { contratoId: id, limit: 50 });
+  const { data: c, refetch } = useQuery<Alquiler>(`/alquileres/${id}`);
+  const { data: movs } = useQuery<Movimiento[]>('/movimientos', { alquilerId: id, limit: 50 });
   const { data: cuentas } = useQuery<Cuenta[]>('/cuentas', { active: 'true' });
   const [finDialogOpen, setFinDialogOpen] = useState(false);
 
@@ -57,12 +57,12 @@ export default function ContratoDetailPage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Contrato #${c.numero}`}
+        title={`Alquiler #${c.numero}`}
         description={`${c.propiedad.nombre} · ${c.inquilino.name}`}
         actions={
           c.status === 'ACTIVO'
-            ? <Badge variant="outline">{label(contratoStatusLabels, c.status)}</Badge>
-            : <Badge variant="secondary">{label(contratoStatusLabels, c.status)}</Badge>
+            ? <Badge variant="outline">{label(alquilerStatusLabels, c.status)}</Badge>
+            : <Badge variant="secondary">{label(alquilerStatusLabels, c.status)}</Badge>
         }
       />
 
@@ -94,15 +94,15 @@ export default function ContratoDetailPage({ params }: { params: Promise<{ id: s
         </Card>
       </div>
 
-      <SociosSection contrato={c} cuentas={cuentas ?? []} onChange={refetch} />
+      <SociosSection alquiler={c} cuentas={cuentas ?? []} onChange={refetch} />
 
       {c.status === 'ACTIVO' && (
         <div>
-          <Button variant="outline" onClick={() => setFinDialogOpen(true)}>Finalizar contrato</Button>
+          <Button variant="outline" onClick={() => setFinDialogOpen(true)}>Finalizar alquiler</Button>
         </div>
       )}
 
-      <FinalizarDialog contratoId={c.id} open={finDialogOpen} onClose={() => setFinDialogOpen(false)} onSaved={() => { setFinDialogOpen(false); refetch(); }} />
+      <FinalizarDialog alquilerId={c.id} open={finDialogOpen} onClose={() => setFinDialogOpen(false)} onSaved={() => { setFinDialogOpen(false); refetch(); }} />
 
       <Card>
         <CardHeader><CardTitle>Movimientos</CardTitle></CardHeader>
@@ -139,15 +139,15 @@ export default function ContratoDetailPage({ params }: { params: Promise<{ id: s
 
 type SocioRow = { cuentaId: string; percent: string };
 
-function SociosSection({ contrato, cuentas, onChange }: { contrato: Contrato; cuentas: Cuenta[]; onChange: () => void }) {
+function SociosSection({ alquiler, cuentas, onChange }: { alquiler: Alquiler; cuentas: Cuenta[]; onChange: () => void }) {
   const [rows, setRows] = useState<SocioRow[]>([]);
   const save = useMutation<{ socios: Array<{ cuentaId: string; percentBps: number }> }, unknown>(
-    `/contratos/${contrato.id}/socios`,
+    `/alquileres/${alquiler.id}/socios`,
   );
 
   useEffect(() => {
-    setRows(contrato.socios.map((s) => ({ cuentaId: s.cuentaId, percent: (s.percentBps / 100).toFixed(2) })));
-  }, [contrato.socios]);
+    setRows(alquiler.socios.map((s) => ({ cuentaId: s.cuentaId, percent: (s.percentBps / 100).toFixed(2) })));
+  }, [alquiler.socios]);
 
   const sumBps = useMemo(() =>
     rows.reduce((acc, s) => {
@@ -173,7 +173,7 @@ function SociosSection({ contrato, cuentas, onChange }: { contrato: Contrato; cu
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>Socios del contrato</span>
+          <span>Socios del alquiler</span>
           <Button size="sm" variant="ghost" onClick={() => setRows((r) => [...r, { cuentaId: '', percent: '' }])}>
             <Plus className="h-4 w-4" /> Agregar
           </Button>
@@ -216,16 +216,16 @@ function SociosSection({ contrato, cuentas, onChange }: { contrato: Contrato; cu
   );
 }
 
-function FinalizarDialog({ contratoId, open, onClose, onSaved }: { contratoId: string; open: boolean; onClose: () => void; onSaved: () => void }) {
+function FinalizarDialog({ alquilerId, open, onClose, onSaved }: { alquilerId: string; open: boolean; onClose: () => void; onSaved: () => void }) {
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
   const [motivo, setMotivo] = useState('');
-  const save = useMutation<{ finalizadoEn: string; motivoFinalizacion: string }, unknown>(`/contratos/${contratoId}/finalizar`);
+  const save = useMutation<{ finalizadoEn: string; motivoFinalizacion: string }, unknown>(`/alquileres/${alquilerId}/finalizar`);
 
   async function submit() {
     if (!motivo.trim()) return;
     try {
       await save.mutate({ finalizadoEn: fecha, motivoFinalizacion: motivo.trim() });
-      toast.success('Contrato finalizado');
+      toast.success('Alquiler finalizado');
       onSaved();
     } catch (e) {
       toast.error(formatApiError(e));
@@ -235,7 +235,7 @@ function FinalizarDialog({ contratoId, open, onClose, onSaved }: { contratoId: s
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent>
-        <DialogHeader><DialogTitle>Finalizar contrato</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Finalizar alquiler</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div>
             <Label>Fecha de finalización</Label>

@@ -1,4 +1,4 @@
-// Propiedad: metadata física. Pertenece a una sociedad. Cobija contratos sucesivos.
+// Propiedad: metadata física. Pertenece a una sociedad. Cobija alquileres sucesivos.
 // Gastos atribuibles a propiedad (ABL, expensas) sobreviven cambios de inquilino.
 model Propiedad {
   id          String    @id @default(cuid())
@@ -13,7 +13,7 @@ model Propiedad {
   deletedAt   DateTime?
 
   sociedad    Sociedad     @relation(fields: [sociedadId], references: [id])
-  contratos   Contrato[]
+  alquileres  Alquiler[]
   movimientos Movimiento[]
 
   @@index([sociedadId])

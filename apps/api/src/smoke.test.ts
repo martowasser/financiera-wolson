@@ -40,7 +40,7 @@ async function seedScenario() {
     direccion: 'Av. Mayo 123, Piso 4 B, CABA',
   });
 
-  const contrato = await post('/api/contratos', headers, {
+  const alquiler = await post('/api/alquileres', headers, {
     propiedadId: propiedad.id,
     inquilinoId: inq.id,
     monto: '10000000',
@@ -48,7 +48,7 @@ async function seedScenario() {
     fechaInicio: '2026-04-01',
   });
 
-  return { user, alberto, casab, inq, sociedad, banco, propiedad, contrato };
+  return { user, alberto, casab, inq, sociedad, banco, propiedad, alquiler };
 }
 
 async function post(url: string, headers: Record<string, string>, body: unknown) {
@@ -67,7 +67,7 @@ async function get(url: string, headers: Record<string, string>) {
 
 describe('Smoke: full happy path', () => {
   it('cobro alquiler a banco → saldo banco sube', async () => {
-    const { banco, contrato } = await seedScenario();
+    const { banco, alquiler } = await seedScenario();
     const headers = authHeader(authToken);
 
     await post('/api/movimientos', headers, {
@@ -77,7 +77,7 @@ describe('Smoke: full happy path', () => {
       moneda: 'ARS',
       destinoBucket: 'BANCO',
       destinoBancoId: banco.id,
-      contratoId: contrato.id,
+      alquilerId: alquiler.id,
     });
 
     const after = await get(`/api/bancos/${banco.id}`, headers);
@@ -141,11 +141,11 @@ describe('Smoke: full happy path', () => {
 });
 
 describe('Smoke: business rules', () => {
-  it('contrato FINALIZADO rechaza ALQUILER_COBRO con fecha posterior', async () => {
-    const { contrato, banco } = await seedScenario();
+  it('alquiler FINALIZADO rechaza ALQUILER_COBRO con fecha posterior', async () => {
+    const { alquiler, banco } = await seedScenario();
     const headers = authHeader(authToken);
 
-    await post(`/api/contratos/${contrato.id}/finalizar`, headers, {
+    await post(`/api/alquileres/${alquiler.id}/finalizar`, headers, {
       finalizadoEn: '2026-04-15',
       motivoFinalizacion: 'Inquilino se fue',
     });
@@ -155,11 +155,11 @@ describe('Smoke: business rules', () => {
       payload: {
         fecha: '2026-04-20', tipo: 'ALQUILER_COBRO', monto: '10000000', moneda: 'ARS',
         destinoBucket: 'BANCO', destinoBancoId: banco.id,
-        contratoId: contrato.id,
+        alquilerId: alquiler.id,
       },
     });
     expect(res.statusCode).toBe(409);
-    expect(res.json().error.code).toBe('CONTRATO_FINALIZADO_FECHA_POSTERIOR');
+    expect(res.json().error.code).toBe('ALQUILER_FINALIZADO_FECHA_POSTERIOR');
   });
 
   it('sociedad.replaceSocios valida suma bps==10000', async () => {
@@ -262,10 +262,10 @@ describe('Smoke: business rules', () => {
     expect(porSocio[casab.id]).toBe('5000000');
   });
 
-  it('contrato.POST pre-llena socios desde la sociedad si no se pasan', async () => {
-    const { contrato, alberto, casab } = await seedScenario();
+  it('alquiler.POST pre-llena socios desde la sociedad si no se pasan', async () => {
+    const { alquiler, alberto, casab } = await seedScenario();
     const headers = authHeader(authToken);
-    const full = await get(`/api/contratos/${contrato.id}`, headers);
+    const full = await get(`/api/alquileres/${alquiler.id}`, headers);
     const cuentaIds = full.socios.map((s: { cuentaId: string }) => s.cuentaId).sort();
     expect(cuentaIds).toEqual([alberto.id, casab.id].sort());
     const totalBps = full.socios.reduce((s: number, x: { percentBps: number }) => s + x.percentBps, 0);
@@ -273,10 +273,10 @@ describe('Smoke: business rules', () => {
   });
 
   it('alquileres report marca PENDIENTE cuando no hubo cobro este mes', async () => {
-    const { contrato } = await seedScenario();
+    const { alquiler } = await seedScenario();
     const headers = authHeader(authToken);
     const alquileres = await get('/api/reports/alquileres', headers);
-    const c = alquileres.find((a: { id: string }) => a.id === contrato.id);
+    const c = alquileres.find((a: { id: string }) => a.id === alquiler.id);
     expect(c.estadoDelMes).toBe('PENDIENTE');
   });
 

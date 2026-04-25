@@ -17,7 +17,7 @@ type TipoRule = {
   flow: 'I' | 'E' | 'T' | 'F';
   origenAllowed?: BucketTipo[];
   destinoAllowed?: BucketTipo[];
-  requireContrato?: boolean;
+  requireAlquiler?: boolean;
   requirePropiedad?: boolean;
   requireSociedad?: boolean;
   requireBancoOrigen?: boolean;
@@ -25,7 +25,7 @@ type TipoRule = {
 };
 
 const RULES: Record<MovimientoTipo, TipoRule> = {
-  ALQUILER_COBRO:    { flow: 'I', destinoAllowed: ['CAJA', 'BANCO'], requireContrato: true },
+  ALQUILER_COBRO:    { flow: 'I', destinoAllowed: ['CAJA', 'BANCO'], requireAlquiler: true },
   GASTO:             { flow: 'E', origenAllowed: ['CAJA', 'BANCO', 'CUENTA_CORRIENTE'] },
   GASTO_SOCIEDAD:    { flow: 'E', origenAllowed: ['CAJA', 'BANCO'],  requireSociedad: true },
   GASTO_PROPIEDAD:   { flow: 'E', origenAllowed: ['CAJA', 'BANCO'],  requirePropiedad: true },
@@ -157,8 +157,8 @@ export async function createMovimiento(input: CreateMovimientoInput, userId: str
   if (rule.requireNotes && !input.notes) {
     throw unprocessable('notes es requerido para este tipo', 'MOV_NOTES_REQUIRED');
   }
-  if (rule.requireContrato && !input.contratoId) {
-    throw unprocessable('contratoId es requerido', 'MOV_CONTRATO_REQUIRED');
+  if (rule.requireAlquiler && !input.alquilerId) {
+    throw unprocessable('alquilerId es requerido', 'MOV_ALQUILER_REQUIRED');
   }
   if (rule.requirePropiedad && !input.propiedadId) {
     throw unprocessable('propiedadId es requerido', 'MOV_PROPIEDAD_REQUIRED');
@@ -172,12 +172,12 @@ export async function createMovimiento(input: CreateMovimientoInput, userId: str
 
   return prisma.$transaction(async (tx) => {
     // Validate referenced bancos/cuentas exist & active.
-    const [origenBanco, destinoBanco, origenCuenta, destinoCuenta, contratoCheck, propiedadCheck, sociedadCheck, contraparteCheck] = await Promise.all([
+    const [origenBanco, destinoBanco, origenCuenta, destinoCuenta, alquilerCheck, propiedadCheck, sociedadCheck, contraparteCheck] = await Promise.all([
       input.origenBancoId  ? tx.banco.findUnique({ where: { id: input.origenBancoId } })   : null,
       input.destinoBancoId ? tx.banco.findUnique({ where: { id: input.destinoBancoId } })  : null,
       input.origenCuentaId ? tx.cuenta.findUnique({ where: { id: input.origenCuentaId } }) : null,
       input.destinoCuentaId? tx.cuenta.findUnique({ where: { id: input.destinoCuentaId } }): null,
-      input.contratoId     ? tx.contrato.findUnique({ where: { id: input.contratoId }, include: { propiedad: true } }) : null,
+      input.alquilerId     ? tx.alquiler.findUnique({ where: { id: input.alquilerId }, include: { propiedad: true } }) : null,
       input.propiedadId    ? tx.propiedad.findUnique({ where: { id: input.propiedadId } }) : null,
       input.sociedadId     ? tx.sociedad.findUnique({ where: { id: input.sociedadId } })   : null,
       input.cuentaContraparteId ? tx.cuenta.findUnique({ where: { id: input.cuentaContraparteId } }) : null,
@@ -187,19 +187,19 @@ export async function createMovimiento(input: CreateMovimientoInput, userId: str
     if (input.destinoBancoId && (!destinoBanco || destinoBanco.deletedAt || !destinoBanco.isActive))  throw unprocessable('Banco destino inválido o cerrado',  'MOV_BANCO_DESTINO_INVALID');
     if (input.origenCuentaId && (!origenCuenta || origenCuenta.deletedAt || !origenCuenta.isActive))  throw unprocessable('Cuenta origen inválida o inactiva',  'MOV_CUENTA_ORIGEN_INVALID');
     if (input.destinoCuentaId && (!destinoCuenta || destinoCuenta.deletedAt || !destinoCuenta.isActive)) throw unprocessable('Cuenta destino inválida o inactiva', 'MOV_CUENTA_DESTINO_INVALID');
-    if (input.contratoId  && (!contratoCheck  || contratoCheck.deletedAt))    throw unprocessable('Contrato inválido',  'MOV_CONTRATO_INVALID');
+    if (input.alquilerId  && (!alquilerCheck  || alquilerCheck.deletedAt))    throw unprocessable('Alquiler inválido',  'MOV_ALQUILER_INVALID');
     if (input.propiedadId && (!propiedadCheck || propiedadCheck.deletedAt))   throw unprocessable('Propiedad inválida', 'MOV_PROPIEDAD_INVALID');
     if (input.sociedadId  && (!sociedadCheck  || sociedadCheck.deletedAt))    throw unprocessable('Sociedad inválida',  'MOV_SOCIEDAD_INVALID');
     if (input.cuentaContraparteId && (!contraparteCheck || contraparteCheck.deletedAt)) throw unprocessable('Cuenta contraparte inválida', 'MOV_CONTRAPARTE_INVALID');
 
-    // Reject post-finalización ALQUILER on FINALIZADO contracts.
-    if (contratoCheck && input.tipo === 'ALQUILER_COBRO') {
-      if (contratoCheck.status === 'FINALIZADO' && contratoCheck.finalizadoEn) {
+    // Reject post-finalización ALQUILER on FINALIZADO alquileres.
+    if (alquilerCheck && input.tipo === 'ALQUILER_COBRO') {
+      if (alquilerCheck.status === 'FINALIZADO' && alquilerCheck.finalizadoEn) {
         const fechaInput = new Date(`${input.fecha}T00:00:00.000Z`);
-        if (fechaInput > contratoCheck.finalizadoEn) {
+        if (fechaInput > alquilerCheck.finalizadoEn) {
           throw conflict(
-            'No se puede registrar alquiler con fecha posterior a la finalización del contrato',
-            'CONTRATO_FINALIZADO_FECHA_POSTERIOR',
+            'No se puede registrar un cobro con fecha posterior a la finalización del alquiler',
+            'ALQUILER_FINALIZADO_FECHA_POSTERIOR',
           );
         }
       }
@@ -208,7 +208,7 @@ export async function createMovimiento(input: CreateMovimientoInput, userId: str
     // Derive sociedadId from banco/propiedad if not provided.
     let sociedadId = input.sociedadId;
     if (!sociedadId && input.propiedadId && propiedadCheck) sociedadId = propiedadCheck.sociedadId;
-    if (!sociedadId && contratoCheck) sociedadId = contratoCheck.propiedad.sociedadId;
+    if (!sociedadId && alquilerCheck) sociedadId = alquilerCheck.propiedad.sociedadId;
     if (!sociedadId && origenBanco) sociedadId = origenBanco.sociedadId;
     if (!sociedadId && destinoBanco) sociedadId = destinoBanco.sociedadId;
 
@@ -229,7 +229,7 @@ export async function createMovimiento(input: CreateMovimientoInput, userId: str
         destinoCuentaId: input.destinoCuentaId,
         sociedadId,
         propiedadId: input.propiedadId,
-        contratoId: input.contratoId,
+        alquilerId: input.alquilerId,
         cuentaContraparteId: input.cuentaContraparteId,
         comprobante: input.comprobante ?? null,
         facturado: input.facturado ?? false,
@@ -281,7 +281,7 @@ export async function reversarMovimiento(id: string, motivo: string, userId: str
         destinoCuentaId: original.origenCuentaId,
         sociedadId: original.sociedadId,
         propiedadId: original.propiedadId,
-        contratoId: original.contratoId,
+        alquilerId: original.alquilerId,
         cuentaContraparteId: original.cuentaContraparteId,
         comprobante: original.comprobante,
         facturado: false,
@@ -306,7 +306,7 @@ export async function listMovimientos(opts: {
   to?: string;
   sociedadId?: string;
   propiedadId?: string;
-  contratoId?: string;
+  alquilerId?: string;
   bancoId?: string;
   cuentaId?: string;
   tipo?: MovimientoTipo;
@@ -322,7 +322,7 @@ export async function listMovimientos(opts: {
     if (opts.to)   (where.fecha as Prisma.DateTimeFilter).lte = new Date(`${opts.to}T00:00:00.000Z`);
   }
   if (opts.tipo) where.tipo = opts.tipo;
-  if (opts.contratoId) where.contratoId = opts.contratoId;
+  if (opts.alquilerId) where.alquilerId = opts.alquilerId;
   if (opts.propiedadId) where.propiedadId = opts.propiedadId;
   if (opts.bancoId) {
     where.OR = [{ origenBancoId: opts.bancoId }, { destinoBancoId: opts.bancoId }];
@@ -335,13 +335,13 @@ export async function listMovimientos(opts: {
     ];
   }
   if (opts.sociedadId) {
-    // Transitive: direct, via banco origen/destino, or via contrato.propiedad.sociedad.
+    // Transitive: direct, via banco origen/destino, or via alquiler.propiedad.sociedad.
     where.OR = [
       ...(where.OR ?? []),
       { sociedadId: opts.sociedadId },
       { bancoOrigen:  { sociedadId: opts.sociedadId } },
       { bancoDestino: { sociedadId: opts.sociedadId } },
-      { contrato: { propiedad: { sociedadId: opts.sociedadId } } },
+      { alquiler: { propiedad: { sociedadId: opts.sociedadId } } },
       { propiedad: { sociedadId: opts.sociedadId } },
     ];
   }
@@ -369,7 +369,7 @@ export async function listMovimientos(opts: {
       cuentaContraparte: { select: { id: true, name: true } },
       sociedad: { select: { id: true, name: true } },
       propiedad:{ select: { id: true, nombre: true } },
-      contrato: { select: { id: true, numero: true } },
+      alquiler: { select: { id: true, numero: true } },
     },
   });
 }
@@ -385,7 +385,7 @@ export async function getMovimiento(id: string) {
       cuentaContraparte: true,
       sociedad: true,
       propiedad: true,
-      contrato: { include: { propiedad: true, inquilino: true } },
+      alquiler: { include: { propiedad: true, inquilino: true } },
       cajaDia: true,
       createdBy: { select: { id: true, username: true, name: true } },
     },

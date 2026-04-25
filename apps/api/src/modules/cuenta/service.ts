@@ -53,14 +53,14 @@ export async function updateCuenta(id: string, input: UpdateCuentaInput) {
 export async function deleteCuenta(id: string) {
   await getCuenta(id);
   // Block soft-delete if any active membership references this cuenta.
-  const [sociedadMemberships, contratoMemberships, contratosInquilino] = await Promise.all([
+  const [sociedadMemberships, alquilerMemberships, alquileresInquilino] = await Promise.all([
     prisma.sociedadSocio.count({ where: { cuentaId: id } }),
-    prisma.contratoSocio.count({ where: { cuentaId: id } }),
-    prisma.contrato.count({ where: { inquilinoId: id, deletedAt: null } }),
+    prisma.alquilerSocio.count({ where: { cuentaId: id } }),
+    prisma.alquiler.count({ where: { inquilinoId: id, deletedAt: null } }),
   ]);
-  if (sociedadMemberships > 0 || contratoMemberships > 0 || contratosInquilino > 0) {
+  if (sociedadMemberships > 0 || alquilerMemberships > 0 || alquileresInquilino > 0) {
     throw unprocessable(
-      'No se puede eliminar: la cuenta participa de sociedades, contratos o como inquilino activo',
+      'No se puede eliminar: la cuenta participa de sociedades, alquileres o como inquilino activo',
       'CUENTA_HAS_DEPENDENCIES',
     );
   }
@@ -94,7 +94,7 @@ export async function getCuentaMovimientos(id: string, opts: { from?: string; to
       cuentaOrigen: { select: { id: true, name: true } },
       cuentaDestino: { select: { id: true, name: true } },
       sociedad: { select: { id: true, name: true } },
-      contrato: { select: { id: true, numero: true } },
+      alquiler: { select: { id: true, numero: true } },
     },
   });
 }

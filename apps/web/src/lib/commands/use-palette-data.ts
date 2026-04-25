@@ -8,7 +8,7 @@ import type { PaletteCommand } from './types';
 type CuentaSummary = { id: string; name: string; identifier: string | null };
 type SociedadSummary = { id: string; name: string };
 type PropiedadSummary = { id: string; nombre: string; direccion: string };
-type ContratoSummary = {
+type AlquilerSummary = {
   id: string;
   numero: number;
   inquilino: { name: string };
@@ -30,7 +30,7 @@ export function usePaletteData(isOpen: boolean): PaletteCommand[] {
   const { data: cuentas,    refetch: rA } = useQuery<CuentaSummary[]>('/cuentas');
   const { data: sociedades, refetch: rB } = useQuery<SociedadSummary[]>('/sociedades');
   const { data: propiedades,refetch: rC } = useQuery<PropiedadSummary[]>('/propiedades');
-  const { data: contratos,  refetch: rD } = useQuery<ContratoSummary[]>('/contratos');
+  const { data: alquileres, refetch: rD } = useQuery<AlquilerSummary[]>('/alquileres');
   const { data: movimientos,refetch: rE } = useQuery<MovimientoSummary[]>('/movimientos');
 
   useEffect(() => {
@@ -65,12 +65,13 @@ export function usePaletteData(isOpen: boolean): PaletteCommand[] {
         run: () => router.push(`/propiedades/${p.id}`),
       });
     }
-    for (const c of contratos ?? []) {
+    for (const c of alquileres ?? []) {
       items.push({
-        id: `contrato-${c.id}`,
+        id: `alquiler-${c.id}`,
         label: `#${c.numero} · ${c.propiedad.nombre} · ${c.inquilino.name}`,
-        group: 'Contratos',
-        run: () => router.push(`/contratos/${c.id}`),
+        group: 'Alquileres',
+        keywords: ['contrato'],
+        run: () => router.push(`/alquileres/${c.id}`),
       });
     }
     const recentMovs = (movimientos ?? []).slice(0, RECENT_LIMIT);
@@ -83,5 +84,5 @@ export function usePaletteData(isOpen: boolean): PaletteCommand[] {
       });
     }
     return items;
-  }, [cuentas, sociedades, propiedades, contratos, movimientos, router]);
+  }, [cuentas, sociedades, propiedades, alquileres, movimientos, router]);
 }

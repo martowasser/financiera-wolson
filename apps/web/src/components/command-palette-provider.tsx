@@ -39,7 +39,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       { keys: ['g', 'n'], href: '/entities?tab=personas', label: 'Ir a Personas' },
       { keys: ['g', 'u'], href: '/accounts', label: 'Ir a Cuentas' },
       { keys: ['g', 'p'], href: '/properties', label: 'Ir a Propiedades' },
-      { keys: ['g', 'r'], href: '/leases', label: 'Ir a Contratos' },
+      { keys: ['g', 'r'], href: '/leases', label: 'Ir a Alquileres' },
       { keys: ['g', 'i'], href: '/invoices', label: 'Ir a Cobro Alquileres' },
       { keys: ['g', 'x'], href: '/settlements', label: 'Ir a Distribución a Socios' },
       { keys: ['g', 'o'], href: '/reconciliation', label: 'Ir a Conciliación' },

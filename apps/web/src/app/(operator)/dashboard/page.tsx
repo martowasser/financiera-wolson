@@ -166,7 +166,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Alquileres pendientes del mes</span>
-              <Link href="/contratos" className="text-xs text-muted-foreground hover:underline">Ver contratos</Link>
+              <Link href="/alquileres" className="text-xs text-muted-foreground hover:underline">Ver alquileres</Link>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -177,7 +177,7 @@ export default function DashboardPage() {
                 {pendientes.map((a) => (
                   <li key={a.id} className="flex items-center justify-between text-sm border-b pb-2 last:border-0">
                     <div>
-                      <Link href={`/contratos/${a.id}`} className="font-mono text-xs text-muted-foreground hover:underline">#{a.numero}</Link>{' '}
+                      <Link href={`/alquileres/${a.id}`} className="font-mono text-xs text-muted-foreground hover:underline">#{a.numero}</Link>{' '}
                       <span>{a.propiedad.nombre} · {a.inquilino.name}</span>
                     </div>
                     <div className="flex items-center gap-2">

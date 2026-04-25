@@ -20,7 +20,7 @@ export const bucketLabels: Record<string, string> = {
   CUENTA_CORRIENTE: 'Cuenta corriente',
 };
 
-export const contratoStatusLabels: Record<string, string> = {
+export const alquilerStatusLabels: Record<string, string> = {
   ACTIVO:     'Activo',
   FINALIZADO: 'Finalizado',
 };

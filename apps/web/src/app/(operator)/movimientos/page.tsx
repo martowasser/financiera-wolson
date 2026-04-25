@@ -40,13 +40,13 @@ type Mov = {
   cuentaContraparte: { id: string; name: string } | null;
   sociedad: { id: string; name: string } | null;
   propiedad: { id: string; nombre: string } | null;
-  contrato: { id: string; numero: number } | null;
+  alquiler: { id: string; numero: number } | null;
 };
 
 type Filters = {
   tipo?: string;
   sociedadId?: string;
-  contratoId?: string;
+  alquilerId?: string;
   propiedadId?: string;
   bancoId?: string;
   cuentaId?: string;
@@ -159,7 +159,7 @@ function legibleSide(m: Mov, side: 'origen' | 'destino') {
 
 function contextoLine(m: Mov) {
   const parts: string[] = [];
-  if (m.contrato) parts.push(`#${m.contrato.numero}`);
+  if (m.alquiler) parts.push(`#${m.alquiler.numero}`);
   if (m.propiedad) parts.push(m.propiedad.nombre);
   if (m.sociedad) parts.push(m.sociedad.name);
   if (m.cuentaContraparte) parts.push(m.cuentaContraparte.name);
@@ -249,11 +249,11 @@ function DetailView({ mov, onChange }: {
         <div>{legibleSide(mov, 'origen')} → {legibleSide(mov, 'destino')}</div>
       </div>
 
-      {(mov.sociedad || mov.propiedad || mov.contrato || mov.cuentaContraparte) && (
+      {(mov.sociedad || mov.propiedad || mov.alquiler || mov.cuentaContraparte) && (
         <div className="rounded-md border p-3 space-y-1 text-xs">
           {mov.sociedad && <div><span className="text-muted-foreground">Sociedad:</span> <Link href={`/sociedades/${mov.sociedad.id}`} className="hover:underline">{mov.sociedad.name}</Link></div>}
           {mov.propiedad && <div><span className="text-muted-foreground">Propiedad:</span> <Link href={`/propiedades/${mov.propiedad.id}`} className="hover:underline">{mov.propiedad.nombre}</Link></div>}
-          {mov.contrato && <div><span className="text-muted-foreground">Contrato:</span> <Link href={`/contratos/${mov.contrato.id}`} className="hover:underline">#{mov.contrato.numero}</Link></div>}
+          {mov.alquiler && <div><span className="text-muted-foreground">Alquiler:</span> <Link href={`/alquileres/${mov.alquiler.id}`} className="hover:underline">#{mov.alquiler.numero}</Link></div>}
           {mov.cuentaContraparte && <div><span className="text-muted-foreground">Contraparte:</span> <Link href={`/cuentas/${mov.cuentaContraparte.id}`} className="hover:underline">{mov.cuentaContraparte.name}</Link></div>}
         </div>
       )}

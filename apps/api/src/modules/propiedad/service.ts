@@ -23,8 +23,8 @@ export async function listPropiedades(opts: ListPropiedadesQuery) {
     orderBy: { nombre: 'asc' },
     include: {
       sociedad: { select: { id: true, name: true } },
-      // Active-contratos count surfaces occupancy at-a-glance in the list view.
-      _count: { select: { contratos: { where: { status: 'ACTIVO', deletedAt: null } } } },
+      // Active-alquileres count surfaces occupancy at-a-glance in the list view.
+      _count: { select: { alquileres: { where: { status: 'ACTIVO', deletedAt: null } } } },
     },
   });
 }
@@ -34,7 +34,7 @@ export async function getPropiedad(id: string) {
     where: { id },
     include: {
       sociedad: { select: { id: true, name: true } },
-      contratos: {
+      alquileres: {
         where: { deletedAt: null, status: { in: ['ACTIVO', 'FINALIZADO'] } },
         orderBy: [{ status: 'asc' }, { fechaInicio: 'desc' }],
         select: {
@@ -85,15 +85,15 @@ export async function updatePropiedad(id: string, input: UpdatePropiedadInput) {
 export async function deletePropiedad(id: string) {
   const existing = await prisma.propiedad.findUnique({ where: { id } });
   if (!existing || existing.deletedAt) throw notFound('Propiedad no encontrada');
-  // Block soft-delete while active contratos or any historic movimientos reference this propiedad,
+  // Block soft-delete while active alquileres or any historic movimientos reference this propiedad,
   // so ABL/expensas history and current rentals stay intact.
-  const [activeContratos, movimientos] = await Promise.all([
-    prisma.contrato.count({ where: { propiedadId: id, status: 'ACTIVO', deletedAt: null } }),
+  const [activeAlquileres, movimientos] = await Promise.all([
+    prisma.alquiler.count({ where: { propiedadId: id, status: 'ACTIVO', deletedAt: null } }),
     prisma.movimiento.count({ where: { propiedadId: id } }),
   ]);
-  if (activeContratos > 0 || movimientos > 0) {
+  if (activeAlquileres > 0 || movimientos > 0) {
     throw unprocessable(
-      'No se puede eliminar: la propiedad tiene contratos activos o movimientos asociados',
+      'No se puede eliminar: la propiedad tiene alquileres activos o movimientos asociados',
       'PROPIEDAD_HAS_DEPENDENCIES',
     );
   }

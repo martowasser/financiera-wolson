@@ -77,7 +77,7 @@ export async function getPosicion() {
 }
 
 /**
- * Estado del mes para cada contrato ACTIVO o recientemente FINALIZADO.
+ * Estado del mes para cada alquiler ACTIVO o recientemente FINALIZADO.
  * AL_DIA: cobro este mes con facturado=true.
  * SIN_FACTURAR: cobro este mes con facturado=false.
  * PENDIENTE: sin cobro este mes y status=ACTIVO.
@@ -87,7 +87,7 @@ export async function getAlquileres() {
   const inicioMes = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const inicioMesSig = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
 
-  const contratos = await prisma.contrato.findMany({
+  const alquileres = await prisma.alquiler.findMany({
     where: { deletedAt: null },
     orderBy: [{ status: 'asc' }, { numero: 'desc' }],
     include: {
@@ -105,7 +105,7 @@ export async function getAlquileres() {
     },
   });
 
-  return contratos.map((c) => {
+  return alquileres.map((c) => {
     const cobroMes = c.movimientos[0] ?? null;
     let estadoDelMes: 'AL_DIA' | 'SIN_FACTURAR' | 'PENDIENTE' | 'NO_APLICA';
     if (c.status === 'FINALIZADO') {

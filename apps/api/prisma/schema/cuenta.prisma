@@ -14,8 +14,8 @@ model Cuenta {
   deletedAt  DateTime?
 
   sociedadMemberships    SociedadSocio[]
-  contratoMemberships    ContratoSocio[]
-  contratosComoInquilino Contrato[]      @relation("ContratoInquilino")
+  alquilerMemberships    AlquilerSocio[]
+  alquileresComoInquilino Alquiler[]     @relation("AlquilerInquilino")
   movimientosOrigen      Movimiento[]    @relation("MovimientoOrigenCuenta")
   movimientosDestino     Movimiento[]    @relation("MovimientoDestinoCuenta")
   movimientosContraparte Movimiento[]    @relation("MovimientoContraparte")

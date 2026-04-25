@@ -7,7 +7,7 @@ import { formatMoney, formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { label, movimientoTipoLabels, contratoStatusLabels } from '@/lib/labels';
+import { label, movimientoTipoLabels, alquilerStatusLabels } from '@/lib/labels';
 
 type Propiedad = {
   id: string;
@@ -17,7 +17,7 @@ type Propiedad = {
   notes: string | null;
   isActive: boolean;
   sociedad: { id: string; name: string };
-  contratos: Array<{
+  alquileres: Array<{
     id: string;
     numero: number;
     status: 'ACTIVO' | 'FINALIZADO';
@@ -66,10 +66,10 @@ export default function PropiedadDetailPage({ params }: { params: Promise<{ id: 
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Contratos ({p.contratos.length})</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Alquileres ({p.alquileres.length})</CardTitle></CardHeader>
         <CardContent>
-          {p.contratos.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin contratos.</p>
+          {p.alquileres.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin alquileres.</p>
           ) : (
             <table className="w-full text-sm">
               <thead className="text-muted-foreground">
@@ -82,16 +82,16 @@ export default function PropiedadDetailPage({ params }: { params: Promise<{ id: 
                 </tr>
               </thead>
               <tbody>
-                {p.contratos.map((c) => (
+                {p.alquileres.map((c) => (
                   <tr key={c.id} className="border-t hover:bg-muted/30">
                     <td className="py-2">
-                      <Link href={`/contratos/${c.id}`} className="font-mono text-xs hover:underline">#{c.numero}</Link>
+                      <Link href={`/alquileres/${c.id}`} className="font-mono text-xs hover:underline">#{c.numero}</Link>
                     </td>
                     <td className="py-2">{c.inquilino.name}</td>
                     <td className="py-2">
                       {c.status === 'ACTIVO'
-                        ? <Badge variant="outline">{label(contratoStatusLabels, c.status)}</Badge>
-                        : <Badge variant="secondary">{label(contratoStatusLabels, c.status)}</Badge>}
+                        ? <Badge variant="outline">{label(alquilerStatusLabels, c.status)}</Badge>
+                        : <Badge variant="secondary">{label(alquilerStatusLabels, c.status)}</Badge>}
                     </td>
                     <td className="py-2">{formatDate(c.fechaInicio)}</td>
                     <td className="py-2">

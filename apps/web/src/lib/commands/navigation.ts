@@ -7,7 +7,7 @@ const NAV_ITEMS: { href: string; label: string; keywords?: string[] }[] = [
   { href: '/cuentas',     label: 'Cuentas',      keywords: ['cuenta corriente', 'socios', 'inquilinos'] },
   { href: '/sociedades',  label: 'Sociedades',   keywords: ['empresas', 'da', 'mr'] },
   { href: '/propiedades', label: 'Propiedades',  keywords: ['inmuebles', 'propiedad'] },
-  { href: '/contratos',   label: 'Contratos',    keywords: ['alquileres', 'leases'] },
+  { href: '/alquileres',  label: 'Alquileres',   keywords: ['contratos', 'leases'] },
   { href: '/caja',        label: 'Caja',         keywords: ['cierre', 'efectivo', 'dia'] },
   { href: '/movimientos', label: 'Movimientos',  keywords: ['transacciones', 'asientos', 'cobros', 'pagos'] },
 ];

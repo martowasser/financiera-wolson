@@ -17,9 +17,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { label, contratoStatusLabels } from '@/lib/labels';
+import { label, alquilerStatusLabels } from '@/lib/labels';
 
-type Contrato = {
+type Alquiler = {
   id: string;
   numero: number;
   monto: string;
@@ -35,7 +35,7 @@ type Contrato = {
 type Propiedad = { id: string; nombre: string; direccion: string };
 type Cuenta = { id: string; name: string; identifier: string | null };
 
-export default function ContratosPage() {
+export default function AlquileresPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const newOpen = searchParams.get('new') === '1';
@@ -49,18 +49,18 @@ export default function ContratosPage() {
     return p;
   }, [q, status]);
 
-  const { data: contratos, isLoading, refetch } = useQuery<Contrato[]>('/contratos', params);
+  const { data: alquileres, isLoading, refetch } = useQuery<Alquiler[]>('/alquileres', params);
 
-  const closeDialog = () => router.replace('/contratos');
+  const closeDialog = () => router.replace('/alquileres');
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Contratos"
+        title="Alquileres"
         description="Alquileres vigentes y finalizados"
         actions={
-          <Link href="/contratos?new=1">
-            <Button size="sm"><Plus className="h-4 w-4" /> Nuevo contrato</Button>
+          <Link href="/alquileres?new=1">
+            <Button size="sm"><Plus className="h-4 w-4" /> Nuevo alquiler</Button>
           </Link>
         }
       />
@@ -98,13 +98,13 @@ export default function ContratosPage() {
           </thead>
           <tbody>
             {isLoading && <tr><td colSpan={7} className="px-3 py-4 text-muted-foreground">Cargando…</td></tr>}
-            {contratos && contratos.length === 0 && (
-              <tr><td colSpan={7} className="px-3 py-4 text-muted-foreground">Sin contratos.</td></tr>
+            {alquileres && alquileres.length === 0 && (
+              <tr><td colSpan={7} className="px-3 py-4 text-muted-foreground">Sin alquileres.</td></tr>
             )}
-            {(contratos ?? []).map((c) => (
+            {(alquileres ?? []).map((c) => (
               <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30">
                 <td className="px-3 py-2">
-                  <Link href={`/contratos/${c.id}`} className="font-mono text-xs hover:underline">#{c.numero}</Link>
+                  <Link href={`/alquileres/${c.id}`} className="font-mono text-xs hover:underline">#{c.numero}</Link>
                 </td>
                 <td className="px-3 py-2">
                   <div className="font-medium">{c.propiedad.nombre}</div>
@@ -114,8 +114,8 @@ export default function ContratosPage() {
                 <td className="px-3 py-2 text-right font-medium">{formatMoney(c.monto, c.moneda)}</td>
                 <td className="px-3 py-2 text-center">
                   {c.status === 'ACTIVO'
-                    ? <Badge variant="outline">{label(contratoStatusLabels, c.status)}</Badge>
-                    : <Badge variant="secondary">{label(contratoStatusLabels, c.status)}</Badge>}
+                    ? <Badge variant="outline">{label(alquilerStatusLabels, c.status)}</Badge>
+                    : <Badge variant="secondary">{label(alquilerStatusLabels, c.status)}</Badge>}
                 </td>
                 <td className="px-3 py-2">{formatDate(c.fechaInicio)}</td>
                 <td className="px-3 py-2">
@@ -129,12 +129,12 @@ export default function ContratosPage() {
         </table>
       </div>
 
-      <ContratoNewDialog open={newOpen} onClose={closeDialog} onSaved={() => { refetch(); closeDialog(); }} />
+      <AlquilerNewDialog open={newOpen} onClose={closeDialog} onSaved={() => { refetch(); closeDialog(); }} />
     </div>
   );
 }
 
-function ContratoNewDialog({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
+function AlquilerNewDialog({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
   const { data: propiedades } = useQuery<Propiedad[]>(open ? '/propiedades' : null, { active: 'true' });
   const { data: cuentas } = useQuery<Cuenta[]>(open ? '/cuentas' : null, { active: 'true' });
   const [propiedadId, setPropiedadId] = useState('');
@@ -144,7 +144,7 @@ function ContratoNewDialog({ open, onClose, onSaved }: { open: boolean; onClose:
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().slice(0, 10));
   const [fechaFin, setFechaFin] = useState('');
   const [notes, setNotes] = useState('');
-  const { mutate, isLoading } = useMutation<Record<string, unknown>, { numero: number }>('/contratos');
+  const { mutate, isLoading } = useMutation<Record<string, unknown>, { numero: number }>('/alquileres');
 
   async function submit() {
     if (!propiedadId || !inquilinoId || !monto || !fechaInicio) return;
@@ -158,7 +158,7 @@ function ContratoNewDialog({ open, onClose, onSaved }: { open: boolean; onClose:
         fechaFin: fechaFin || undefined,
         notes: notes.trim() || undefined,
       });
-      toast.success(`Contrato #${res.numero} creado`);
+      toast.success(`Alquiler #${res.numero} creado`);
       setPropiedadId(''); setInquilinoId(''); setMonto(''); setFechaFin(''); setNotes('');
       onSaved();
     } catch (e) {
@@ -169,7 +169,7 @@ function ContratoNewDialog({ open, onClose, onSaved }: { open: boolean; onClose:
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>Nuevo contrato</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Nuevo alquiler</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div>
             <Label>Propiedad</Label>

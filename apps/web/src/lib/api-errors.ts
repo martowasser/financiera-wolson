@@ -31,18 +31,18 @@ export const ERROR_MESSAGES: Record<string, string> = {
   MOV_TRANSFER_SAME: 'Origen y destino no pueden ser iguales.',
   MOV_BUCKET_MISSING: 'Indicá al menos origen o destino.',
   MOV_NOTES_REQUIRED: 'Este tipo requiere que cargues notas.',
-  MOV_CONTRATO_REQUIRED: 'Falta elegir el contrato.',
+  MOV_ALQUILER_REQUIRED: 'Falta elegir el alquiler.',
   MOV_PROPIEDAD_REQUIRED: 'Falta elegir la propiedad.',
   MOV_SOCIEDAD_REQUIRED: 'Falta elegir la sociedad.',
 
-  // Contrato
-  CONTRATO_SOCIOS_DUPLICATE_CUENTA: 'Hay una cuenta duplicada en los socios del contrato.',
-  CONTRATO_SOCIOS_PERCENT_SUM_INVALID: 'Los porcentajes de socios del contrato deben sumar 100%.',
-  CONTRATO_SOCIOS_CUENTA_INVALID: 'Alguna cuenta elegida como socio no existe o está inactiva.',
-  CONTRATO_SOCIOS_EMPTY: 'Falta indicar los socios del contrato.',
-  CONTRATO_YA_FINALIZADO: 'El contrato ya estaba finalizado.',
-  CONTRATO_YA_ACTIVO: 'El contrato ya estaba activo.',
-  CONTRATO_HAS_MOVIMIENTOS: 'No se puede eliminar: el contrato tiene movimientos cargados.',
+  // Alquiler
+  ALQUILER_SOCIOS_DUPLICATE_CUENTA: 'Hay una cuenta duplicada en los socios del alquiler.',
+  ALQUILER_SOCIOS_PERCENT_SUM_INVALID: 'Los porcentajes de socios del alquiler deben sumar 100%.',
+  ALQUILER_SOCIOS_CUENTA_INVALID: 'Alguna cuenta elegida como socio no existe o está inactiva.',
+  ALQUILER_SOCIOS_EMPTY: 'Falta indicar los socios del alquiler.',
+  ALQUILER_YA_FINALIZADO: 'El alquiler ya estaba finalizado.',
+  ALQUILER_YA_ACTIVO: 'El alquiler ya estaba activo.',
+  ALQUILER_HAS_MOVIMIENTOS: 'No se puede eliminar: el alquiler tiene movimientos cargados.',
   PROPIEDAD_NOT_FOUND: 'La propiedad no existe o fue eliminada.',
   INQUILINO_NOT_FOUND: 'El inquilino no existe o fue eliminado.',
 
@@ -57,10 +57,10 @@ export const ERROR_MESSAGES: Record<string, string> = {
   BANCO_ALREADY_EXISTS_FOR_SOCIEDAD: 'Esa sociedad ya tiene un banco asociado.',
 
   // Cuenta
-  CUENTA_HAS_DEPENDENCIES: 'No se puede eliminar: la cuenta participa de sociedades, contratos o como inquilino.',
+  CUENTA_HAS_DEPENDENCIES: 'No se puede eliminar: la cuenta participa de sociedades, alquileres o como inquilino.',
 
   // Propiedad
-  PROPIEDAD_HAS_DEPENDENCIES: 'No se puede eliminar: la propiedad tiene contratos activos o movimientos.',
+  PROPIEDAD_HAS_DEPENDENCIES: 'No se puede eliminar: la propiedad tiene alquileres activos o movimientos.',
 };
 
 export function formatApiError(e: unknown, fallback = 'Ocurrió un error. Probá de nuevo.'): string {

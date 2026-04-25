@@ -33,11 +33,11 @@ export function actionCommands(router: Router): PaletteCommand[] {
       run: () => router.push('/propiedades?new=1'),
     },
     {
-      id: 'action-new-contrato',
-      label: 'Nuevo Contrato',
+      id: 'action-new-alquiler',
+      label: 'Nuevo Alquiler',
       group: 'Acciones',
-      keywords: ['alquiler', 'crear'],
-      run: () => router.push('/contratos?new=1'),
+      keywords: ['contrato', 'crear'],
+      run: () => router.push('/alquileres?new=1'),
     },
     {
       id: 'action-cerrar-caja',

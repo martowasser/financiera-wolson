@@ -23,7 +23,7 @@ const navItems = [
   { href: '/cuentas',       label: 'Cuentas',      icon: Wallet },
   { href: '/sociedades',    label: 'Sociedades',   icon: Building2 },
   { href: '/propiedades',   label: 'Propiedades',  icon: Home },
-  { href: '/contratos',     label: 'Contratos',    icon: FileText },
+  { href: '/alquileres',    label: 'Alquileres',   icon: FileText },
   { href: '/caja',          label: 'Caja',         icon: CalendarCheck },
   { href: '/movimientos',   label: 'Movimientos',  icon: ArrowLeftRight },
 ];

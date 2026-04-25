@@ -1,20 +1,53 @@
 -- CreateEnum
-CREATE TYPE "CajaStatus" AS ENUM ('OPEN', 'CLOSED');
-
--- CreateEnum
-CREATE TYPE "ContratoStatus" AS ENUM ('ACTIVO', 'FINALIZADO');
+CREATE TYPE "AlquilerStatus" AS ENUM ('ACTIVO', 'FINALIZADO');
 
 -- CreateEnum
 CREATE TYPE "Moneda" AS ENUM ('ARS', 'USD');
 
 -- CreateEnum
+CREATE TYPE "CajaStatus" AS ENUM ('OPEN', 'CLOSED');
+
+-- CreateEnum
 CREATE TYPE "BucketTipo" AS ENUM ('CAJA', 'BANCO', 'CUENTA_CORRIENTE');
 
 -- CreateEnum
-CREATE TYPE "MovimientoTipo" AS ENUM ('ALQUILER_COBRO', 'ALQUILER_PAGO', 'GASTO', 'GASTO_SOCIEDAD', 'GASTO_PROPIEDAD', 'INGRESO_VARIO', 'TRANSFERENCIA', 'COMISION_BANCARIA', 'DEBITO_AUTOMATICO', 'RECUPERO', 'AJUSTE', 'OTRO');
+CREATE TYPE "MovimientoTipo" AS ENUM ('ALQUILER_COBRO', 'GASTO', 'GASTO_SOCIEDAD', 'GASTO_PROPIEDAD', 'INGRESO_VARIO', 'TRANSFERENCIA', 'COMISION_BANCARIA', 'DEBITO_AUTOMATICO', 'RECUPERO', 'AJUSTE', 'OTRO');
 
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'OPERATOR', 'VIEWER');
+CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'VIEWER');
+
+-- CreateTable
+CREATE TABLE "Alquiler" (
+    "id" TEXT NOT NULL,
+    "numero" SERIAL NOT NULL,
+    "propiedadId" TEXT NOT NULL,
+    "inquilinoId" TEXT NOT NULL,
+    "monto" BIGINT NOT NULL,
+    "moneda" "Moneda" NOT NULL,
+    "fechaInicio" DATE NOT NULL,
+    "fechaFin" DATE,
+    "status" "AlquilerStatus" NOT NULL DEFAULT 'ACTIVO',
+    "finalizadoEn" DATE,
+    "motivoFinalizacion" TEXT,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
+
+    CONSTRAINT "Alquiler_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "AlquilerSocio" (
+    "id" TEXT NOT NULL,
+    "alquilerId" TEXT NOT NULL,
+    "cuentaId" TEXT NOT NULL,
+    "percentBps" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "AlquilerSocio_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "AuditLog" (
@@ -64,39 +97,6 @@ CREATE TABLE "CajaDia" (
 );
 
 -- CreateTable
-CREATE TABLE "Contrato" (
-    "id" TEXT NOT NULL,
-    "numero" SERIAL NOT NULL,
-    "propiedadId" TEXT NOT NULL,
-    "inquilinoId" TEXT NOT NULL,
-    "monto" BIGINT NOT NULL,
-    "moneda" "Moneda" NOT NULL,
-    "fechaInicio" DATE NOT NULL,
-    "fechaFin" DATE,
-    "status" "ContratoStatus" NOT NULL DEFAULT 'ACTIVO',
-    "finalizadoEn" DATE,
-    "motivoFinalizacion" TEXT,
-    "notes" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "deletedAt" TIMESTAMP(3),
-
-    CONSTRAINT "Contrato_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "ContratoSocio" (
-    "id" TEXT NOT NULL,
-    "contratoId" TEXT NOT NULL,
-    "cuentaId" TEXT NOT NULL,
-    "percentBps" INTEGER NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "ContratoSocio_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Cuenta" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -129,7 +129,7 @@ CREATE TABLE "Movimiento" (
     "destinoCuentaId" TEXT,
     "sociedadId" TEXT,
     "propiedadId" TEXT,
-    "contratoId" TEXT,
+    "alquilerId" TEXT,
     "cuentaContraparteId" TEXT,
     "comprobante" TEXT,
     "facturado" BOOLEAN NOT NULL DEFAULT false,
@@ -209,6 +209,33 @@ CREATE TABLE "RefreshToken" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Alquiler_numero_key" ON "Alquiler"("numero");
+
+-- CreateIndex
+CREATE INDEX "Alquiler_status_idx" ON "Alquiler"("status");
+
+-- CreateIndex
+CREATE INDEX "Alquiler_fechaInicio_idx" ON "Alquiler"("fechaInicio");
+
+-- CreateIndex
+CREATE INDEX "Alquiler_inquilinoId_idx" ON "Alquiler"("inquilinoId");
+
+-- CreateIndex
+CREATE INDEX "Alquiler_propiedadId_idx" ON "Alquiler"("propiedadId");
+
+-- CreateIndex
+CREATE INDEX "Alquiler_numero_idx" ON "Alquiler"("numero");
+
+-- CreateIndex
+CREATE INDEX "AlquilerSocio_alquilerId_idx" ON "AlquilerSocio"("alquilerId");
+
+-- CreateIndex
+CREATE INDEX "AlquilerSocio_cuentaId_idx" ON "AlquilerSocio"("cuentaId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "AlquilerSocio_alquilerId_cuentaId_key" ON "AlquilerSocio"("alquilerId", "cuentaId");
+
+-- CreateIndex
 CREATE INDEX "AuditLog_entity_entityId_idx" ON "AuditLog"("entity", "entityId");
 
 -- CreateIndex
@@ -234,33 +261,6 @@ CREATE INDEX "CajaDia_fecha_idx" ON "CajaDia"("fecha");
 
 -- CreateIndex
 CREATE INDEX "CajaDia_status_idx" ON "CajaDia"("status");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Contrato_numero_key" ON "Contrato"("numero");
-
--- CreateIndex
-CREATE INDEX "Contrato_status_idx" ON "Contrato"("status");
-
--- CreateIndex
-CREATE INDEX "Contrato_fechaInicio_idx" ON "Contrato"("fechaInicio");
-
--- CreateIndex
-CREATE INDEX "Contrato_inquilinoId_idx" ON "Contrato"("inquilinoId");
-
--- CreateIndex
-CREATE INDEX "Contrato_propiedadId_idx" ON "Contrato"("propiedadId");
-
--- CreateIndex
-CREATE INDEX "Contrato_numero_idx" ON "Contrato"("numero");
-
--- CreateIndex
-CREATE INDEX "ContratoSocio_contratoId_idx" ON "ContratoSocio"("contratoId");
-
--- CreateIndex
-CREATE INDEX "ContratoSocio_cuentaId_idx" ON "ContratoSocio"("cuentaId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "ContratoSocio_contratoId_cuentaId_key" ON "ContratoSocio"("contratoId", "cuentaId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Cuenta_identifier_key" ON "Cuenta"("identifier");
@@ -290,7 +290,7 @@ CREATE INDEX "Movimiento_sociedadId_idx" ON "Movimiento"("sociedadId");
 CREATE INDEX "Movimiento_propiedadId_idx" ON "Movimiento"("propiedadId");
 
 -- CreateIndex
-CREATE INDEX "Movimiento_contratoId_idx" ON "Movimiento"("contratoId");
+CREATE INDEX "Movimiento_alquilerId_idx" ON "Movimiento"("alquilerId");
 
 -- CreateIndex
 CREATE INDEX "Movimiento_tipo_idx" ON "Movimiento"("tipo");
@@ -344,6 +344,18 @@ CREATE INDEX "RefreshToken_userId_idx" ON "RefreshToken"("userId");
 CREATE INDEX "RefreshToken_expiresAt_idx" ON "RefreshToken"("expiresAt");
 
 -- AddForeignKey
+ALTER TABLE "Alquiler" ADD CONSTRAINT "Alquiler_propiedadId_fkey" FOREIGN KEY ("propiedadId") REFERENCES "Propiedad"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Alquiler" ADD CONSTRAINT "Alquiler_inquilinoId_fkey" FOREIGN KEY ("inquilinoId") REFERENCES "Cuenta"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AlquilerSocio" ADD CONSTRAINT "AlquilerSocio_alquilerId_fkey" FOREIGN KEY ("alquilerId") REFERENCES "Alquiler"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AlquilerSocio" ADD CONSTRAINT "AlquilerSocio_cuentaId_fkey" FOREIGN KEY ("cuentaId") REFERENCES "Cuenta"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -351,18 +363,6 @@ ALTER TABLE "Banco" ADD CONSTRAINT "Banco_sociedadId_fkey" FOREIGN KEY ("socieda
 
 -- AddForeignKey
 ALTER TABLE "CajaDia" ADD CONSTRAINT "CajaDia_cerradoPorId_fkey" FOREIGN KEY ("cerradoPorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Contrato" ADD CONSTRAINT "Contrato_propiedadId_fkey" FOREIGN KEY ("propiedadId") REFERENCES "Propiedad"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Contrato" ADD CONSTRAINT "Contrato_inquilinoId_fkey" FOREIGN KEY ("inquilinoId") REFERENCES "Cuenta"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ContratoSocio" ADD CONSTRAINT "ContratoSocio_contratoId_fkey" FOREIGN KEY ("contratoId") REFERENCES "Contrato"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ContratoSocio" ADD CONSTRAINT "ContratoSocio_cuentaId_fkey" FOREIGN KEY ("cuentaId") REFERENCES "Cuenta"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Movimiento" ADD CONSTRAINT "Movimiento_reversoDeId_fkey" FOREIGN KEY ("reversoDeId") REFERENCES "Movimiento"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -395,7 +395,7 @@ ALTER TABLE "Movimiento" ADD CONSTRAINT "Movimiento_sociedadId_fkey" FOREIGN KEY
 ALTER TABLE "Movimiento" ADD CONSTRAINT "Movimiento_propiedadId_fkey" FOREIGN KEY ("propiedadId") REFERENCES "Propiedad"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Movimiento" ADD CONSTRAINT "Movimiento_contratoId_fkey" FOREIGN KEY ("contratoId") REFERENCES "Contrato"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Movimiento" ADD CONSTRAINT "Movimiento_alquilerId_fkey" FOREIGN KEY ("alquilerId") REFERENCES "Alquiler"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Propiedad" ADD CONSTRAINT "Propiedad_sociedadId_fkey" FOREIGN KEY ("sociedadId") REFERENCES "Sociedad"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -408,3 +408,7 @@ ALTER TABLE "SociedadSocio" ADD CONSTRAINT "SociedadSocio_cuentaId_fkey" FOREIGN
 
 -- AddForeignKey
 ALTER TABLE "RefreshToken" ADD CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Sequences for user-facing numero fields start at 1000 so the UI never shows single-digit IDs.
+ALTER SEQUENCE "Alquiler_numero_seq" RESTART WITH 1000;
+ALTER SEQUENCE "Movimiento_numero_seq" RESTART WITH 1000;

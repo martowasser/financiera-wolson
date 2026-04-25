@@ -27,7 +27,7 @@ model Movimiento {
 
   sociedadId          String?
   propiedadId         String?
-  contratoId          String?
+  alquilerId          String?
   cuentaContraparteId String?
 
   comprobante String?
@@ -50,13 +50,13 @@ model Movimiento {
   cuentaContraparte Cuenta?   @relation("MovimientoContraparte", fields: [cuentaContraparteId], references: [id])
   sociedad         Sociedad?  @relation(fields: [sociedadId], references: [id])
   propiedad        Propiedad? @relation(fields: [propiedadId], references: [id])
-  contrato         Contrato?  @relation(fields: [contratoId], references: [id])
+  alquiler         Alquiler?  @relation(fields: [alquilerId], references: [id])
 
   @@index([fecha])
   @@index([cajaDiaId])
   @@index([sociedadId])
   @@index([propiedadId])
-  @@index([contratoId])
+  @@index([alquilerId])
   @@index([tipo])
   @@index([numero])
   @@index([origenBancoId])

@@ -39,7 +39,7 @@ export const createMovimientoSchema = z.object({
 
   sociedadId: z.string().optional(),
   propiedadId: z.string().optional(),
-  contratoId: z.string().optional(),
+  alquilerId: z.string().optional(),
   cuentaContraparteId: z.string().optional(),
 
   comprobante: nullishString,
@@ -63,7 +63,7 @@ export const listMovimientosQuerySchema = z.object({
   to: isoDate.optional(),
   sociedadId: z.string().optional(),
   propiedadId: z.string().optional(),
-  contratoId: z.string().optional(),
+  alquilerId: z.string().optional(),
   bancoId: z.string().optional(),
   cuentaId: z.string().optional(),
   tipo: movimientoTipoEnum.optional(),
