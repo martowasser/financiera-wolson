@@ -7,7 +7,6 @@ const bucketEnum = z.enum(['CAJA', 'BANCO', 'CUENTA_CORRIENTE']);
 
 export const movimientoTipoEnum = z.enum([
   'ALQUILER_COBRO',
-  'ALQUILER_PAGO',
   'GASTO',
   'GASTO_SOCIEDAD',
   'GASTO_PROPIEDAD',

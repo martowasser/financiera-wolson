@@ -73,7 +73,6 @@ enum BucketTipo {
 
 enum MovimientoTipo {
   ALQUILER_COBRO
-  ALQUILER_PAGO
   GASTO
   GASTO_SOCIEDAD
   GASTO_PROPIEDAD

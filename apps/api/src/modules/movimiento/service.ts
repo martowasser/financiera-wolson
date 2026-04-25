@@ -26,7 +26,6 @@ type TipoRule = {
 
 const RULES: Record<MovimientoTipo, TipoRule> = {
   ALQUILER_COBRO:    { flow: 'I', destinoAllowed: ['CAJA', 'BANCO'], requireContrato: true },
-  ALQUILER_PAGO:     { flow: 'E', origenAllowed: ['CAJA', 'BANCO'],  requireContrato: true },
   GASTO:             { flow: 'E', origenAllowed: ['CAJA', 'BANCO', 'CUENTA_CORRIENTE'] },
   GASTO_SOCIEDAD:    { flow: 'E', origenAllowed: ['CAJA', 'BANCO'],  requireSociedad: true },
   GASTO_PROPIEDAD:   { flow: 'E', origenAllowed: ['CAJA', 'BANCO'],  requirePropiedad: true },
@@ -194,7 +193,7 @@ export async function createMovimiento(input: CreateMovimientoInput, userId: str
     if (input.cuentaContraparteId && (!contraparteCheck || contraparteCheck.deletedAt)) throw unprocessable('Cuenta contraparte inválida', 'MOV_CONTRAPARTE_INVALID');
 
     // Reject post-finalización ALQUILER on FINALIZADO contracts.
-    if (contratoCheck && (input.tipo === 'ALQUILER_COBRO' || input.tipo === 'ALQUILER_PAGO')) {
+    if (contratoCheck && input.tipo === 'ALQUILER_COBRO') {
       if (contratoCheck.status === 'FINALIZADO' && contratoCheck.finalizadoEn) {
         const fechaInput = new Date(`${input.fecha}T00:00:00.000Z`);
         if (fechaInput > contratoCheck.finalizadoEn) {

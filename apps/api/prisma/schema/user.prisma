@@ -17,7 +17,6 @@ model User {
 
 enum UserRole {
   ADMIN
-  OPERATOR
   VIEWER
 }
 

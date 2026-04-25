@@ -16,7 +16,7 @@ afterAll(async () => {
 // Builds a full scenario once per test (beforeEach wipes DB) so each test is
 // independent. Returns key IDs for assertions.
 async function seedScenario() {
-  const user = await createTestUser({ username: 'op', role: 'OPERATOR' });
+  const user = await createTestUser({ username: 'op', role: 'ADMIN' });
   authToken = getAuthToken(user);
   const headers = authHeader(authToken);
 

@@ -5,7 +5,7 @@ import { signAccessToken, type JwtPayload } from './lib/auth-middleware.js';
 export async function createTestUser(overrides?: Partial<{
   username: string;
   name: string;
-  role: 'ADMIN' | 'OPERATOR' | 'VIEWER';
+  role: 'ADMIN' | 'VIEWER';
   password: string;
   isActive: boolean;
 }>) {

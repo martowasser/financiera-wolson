@@ -2,7 +2,6 @@
 
 export const movimientoTipoLabels: Record<string, string> = {
   ALQUILER_COBRO:    'Cobro de alquiler',
-  ALQUILER_PAGO:     'Pago de alquiler',
   GASTO:             'Gasto',
   GASTO_SOCIEDAD:    'Gasto de sociedad',
   GASTO_PROPIEDAD:   'Gasto de propiedad',
@@ -37,9 +36,8 @@ export const monedaLabels: Record<string, string> = {
 };
 
 export const userRoleLabels: Record<string, string> = {
-  ADMIN:    'Administrador',
-  OPERATOR: 'Operador',
-  VIEWER:   'Visualizador',
+  ADMIN:  'Administrador',
+  VIEWER: 'Visualizador',
 };
 
 export const estadoDelMesLabels: Record<string, string> = {

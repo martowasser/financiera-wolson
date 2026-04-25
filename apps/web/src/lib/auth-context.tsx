@@ -7,7 +7,7 @@ type User = {
   id: string;
   username: string;
   name: string;
-  role: 'ADMIN' | 'OPERATOR' | 'VIEWER';
+  role: 'ADMIN' | 'VIEWER';
   isActive: boolean;
 };
 
