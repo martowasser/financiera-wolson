@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ViewerNav } from '@/components/viewer/viewer-nav';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -27,11 +28,12 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
   if (!user || user.role !== 'VIEWER') return null;
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-muted/20">
-      <div className="max-w-xl mx-auto text-center px-6 py-12 space-y-4">
+    <div className="viewer-theme min-h-screen bg-muted/20">
+      <ViewerNav />
+      <main className="container max-w-4xl mx-auto px-6 py-8 space-y-6">
         {children}
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
 

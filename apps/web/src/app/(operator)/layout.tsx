@@ -19,7 +19,7 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
       router.push('/login');
     }
     if (!isLoading && user && user.role === 'VIEWER') {
-      router.push('/viewer/dashboard');
+      router.push('/viewer/alquileres');
     }
   }, [user, isLoading, router]);
 

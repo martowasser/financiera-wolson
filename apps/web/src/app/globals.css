@@ -128,3 +128,15 @@
     @apply font-sans;
   }
 }
+
+/* Viewer (Alberto) — large type, high contrast, generous spacing. */
+.viewer-theme {
+  font-size: 18px;
+}
+.viewer-theme h1 { font-size: 2rem;   line-height: 1.2; font-weight: 600; }
+.viewer-theme h2 { font-size: 1.5rem; line-height: 1.3; font-weight: 600; }
+.viewer-theme h3 { font-size: 1.25rem;line-height: 1.3; font-weight: 600; }
+.viewer-theme .viewer-amount-xl    { font-size: 4rem;   font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; }
+.viewer-theme .viewer-amount       { font-size: 2.5rem; font-weight: 700; line-height: 1.1; }
+.viewer-theme .viewer-amount-md    { font-size: 1.75rem; font-weight: 600; line-height: 1.2; }
+.viewer-theme p, .viewer-theme li, .viewer-theme span, .viewer-theme div { font-size: inherit; }

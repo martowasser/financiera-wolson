@@ -22,7 +22,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const user = await login(username, password);
-      router.push(user.role === 'VIEWER' ? '/viewer/dashboard' : '/dashboard');
+      router.push(user.role === 'VIEWER' ? '/viewer/alquileres' : '/dashboard');
     } catch {
       setError('Usuario o contraseña incorrectos');
     } finally {

@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -30,6 +31,7 @@ type Cuenta = {
   saldoArs: string;
   saldoUsd: string;
   isActive: boolean;
+  isOwner: boolean;
 };
 
 export default function CuentasPage() {
@@ -99,7 +101,10 @@ export default function CuentasPage() {
             {(cuentas ?? []).map((c) => (
               <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30">
                 <td className="px-3 py-2">
-                  <Link href={`/cuentas/${c.id}`} className="font-medium hover:underline">{c.name}</Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/cuentas/${c.id}`} className="font-medium hover:underline">{c.name}</Link>
+                    {c.isOwner && <Badge>Cuenta de Alberto</Badge>}
+                  </div>
                 </td>
                 <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{c.identifier ?? '—'}</td>
                 <td className="px-3 py-2 text-right">
@@ -128,7 +133,8 @@ function CuentaFormDialog({ open, onClose, onSaved }: { open: boolean; onClose: 
   const [name, setName] = useState('');
   const [identifier, setIdentifier] = useState('');
   const [notes, setNotes] = useState('');
-  const { mutate, isLoading } = useMutation<Record<string, string | undefined>, unknown>('/cuentas');
+  const [isOwner, setIsOwner] = useState(false);
+  const { mutate, isLoading } = useMutation<Record<string, unknown>, unknown>('/cuentas');
 
   async function submit() {
     if (!name.trim()) return;
@@ -137,9 +143,10 @@ function CuentaFormDialog({ open, onClose, onSaved }: { open: boolean; onClose: 
         name: name.trim(),
         identifier: identifier.trim() || undefined,
         notes: notes.trim() || undefined,
+        isOwner,
       });
-      toast.success('Cuenta creada');
-      setName(''); setIdentifier(''); setNotes('');
+      toast.success(isOwner ? 'Cuenta creada y marcada como de Alberto' : 'Cuenta creada');
+      setName(''); setIdentifier(''); setNotes(''); setIsOwner(false);
       onSaved();
     } catch (e) {
       toast.error(formatApiError(e, 'Error al crear'));
@@ -162,6 +169,15 @@ function CuentaFormDialog({ open, onClose, onSaved }: { open: boolean; onClose: 
           <div>
             <Label htmlFor="notes">Notas</Label>
             <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+          </div>
+          <div className="flex items-start justify-between gap-3 rounded-md border p-3">
+            <div className="space-y-1">
+              <Label htmlFor="new-isOwner" className="text-sm font-medium">Es cuenta de Alberto?</Label>
+              <p className="text-xs text-muted-foreground">
+                Marcar si esta cuenta pertenece a Alberto. Puede tener varias.
+              </p>
+            </div>
+            <Switch id="new-isOwner" checked={isOwner} onCheckedChange={setIsOwner} />
           </div>
         </div>
         <DialogFooter>
