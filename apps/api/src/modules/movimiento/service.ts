@@ -539,6 +539,7 @@ export async function listMovimientos(opts: {
   bancoId?: string;
   cuentaId?: string;
   tipo?: MovimientoTipo;
+  moneda?: Moneda;
   q?: string;
   limit?: number;
 }) {
@@ -557,6 +558,7 @@ export async function listMovimientos(opts: {
     if (opts.to)   (where.fecha as Prisma.DateTimeFilter).lte = new Date(`${opts.to}T00:00:00.000Z`);
   }
   if (opts.tipo) where.tipo = opts.tipo;
+  if (opts.moneda) where.moneda = opts.moneda;
   if (opts.alquilerId) where.alquilerId = opts.alquilerId;
   if (opts.propiedadId) where.propiedadId = opts.propiedadId;
   if (opts.bancoId) {

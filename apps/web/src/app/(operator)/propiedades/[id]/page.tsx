@@ -3,11 +3,12 @@
 import { use } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@/lib/hooks';
-import { formatMoney, formatDate } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { label, movimientoTipoLabels, alquilerStatusLabels } from '@/lib/labels';
+import { label, alquilerStatusLabels } from '@/lib/labels';
+import { MovimientosPanel } from '@/components/movimientos-panel';
 
 type Propiedad = {
   id: string;
@@ -28,23 +29,9 @@ type Propiedad = {
   }>;
 };
 
-type Movimiento = {
-  id: string;
-  numero: number;
-  fecha: string;
-  tipo: string;
-  monto: string;
-  moneda: string;
-  bancoOrigen: { nombre: string } | null;
-  bancoDestino: { nombre: string } | null;
-  cuentaOrigen: { name: string } | null;
-  cuentaDestino: { name: string } | null;
-};
-
 export default function PropiedadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: p } = useQuery<Propiedad>(`/propiedades/${id}`);
-  const { data: movs } = useQuery<Movimiento[]>('/movimientos', { propiedadId: id, limit: 50 });
 
   if (!p) return <div className="text-muted-foreground">Cargando…</div>;
 
@@ -107,41 +94,10 @@ export default function PropiedadDetailPage({ params }: { params: Promise<{ id: 
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Movimientos</CardTitle></CardHeader>
-        <CardContent>
-          {movs && movs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin movimientos.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="text-muted-foreground">
-                <tr>
-                  <th className="text-left font-normal py-1">#</th>
-                  <th className="text-left font-normal py-1">Fecha</th>
-                  <th className="text-left font-normal py-1">Tipo</th>
-                  <th className="text-left font-normal py-1">Origen → Destino</th>
-                  <th className="text-right font-normal py-1">Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(movs ?? []).map((m) => {
-                  const origen = m.bancoOrigen?.nombre ?? m.cuentaOrigen?.name ?? '—';
-                  const destino = m.bancoDestino?.nombre ?? m.cuentaDestino?.name ?? '—';
-                  return (
-                    <tr key={m.id} className="border-t hover:bg-muted/30">
-                      <td className="py-2 font-mono text-xs">#{m.numero}</td>
-                      <td className="py-2">{formatDate(m.fecha)}</td>
-                      <td className="py-2">{label(movimientoTipoLabels, m.tipo)}</td>
-                      <td className="py-2 text-muted-foreground">{origen} → {destino}</td>
-                      <td className="py-2 text-right font-medium">{formatMoney(m.monto, m.moneda)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
-      </Card>
+      <MovimientosPanel
+        scope={{ propiedadId: id }}
+        filenameHint={`propiedad-${p.nombre}`}
+      />
     </div>
   );
 }

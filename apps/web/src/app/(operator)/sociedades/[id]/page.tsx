@@ -4,7 +4,7 @@ import { use, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation } from '@/lib/hooks';
 import { formatApiError } from '@/lib/api-errors';
-import { formatMoney, formatDate } from '@/lib/format';
+import { formatMoney } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { label, movimientoTipoLabels } from '@/lib/labels';
+import { MovimientosPanel } from '@/components/movimientos-panel';
 
 type Cuenta = { id: string; name: string; identifier: string | null };
 
@@ -27,24 +27,9 @@ type Sociedad = {
   propiedades: Array<{ id: string; nombre: string; direccion: string }>;
 };
 
-type Movimiento = {
-  id: string;
-  numero: number;
-  fecha: string;
-  tipo: string;
-  monto: string;
-  moneda: string;
-  notes: string | null;
-  bancoOrigen: { nombre: string } | null;
-  bancoDestino: { nombre: string } | null;
-  cuentaOrigen: { name: string } | null;
-  cuentaDestino: { name: string } | null;
-};
-
 export default function SociedadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: sociedad, refetch } = useQuery<Sociedad>(`/sociedades/${id}`);
-  const { data: movs } = useQuery<Movimiento[]>('/movimientos', { sociedadId: id, limit: 50 });
   const { data: cuentas } = useQuery<Cuenta[]>('/cuentas', { active: 'true' });
 
   if (!sociedad) return <div className="text-muted-foreground">Cargando…</div>;
@@ -84,16 +69,10 @@ export default function SociedadDetailPage({ params }: { params: Promise<{ id: s
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Movimientos</CardTitle></CardHeader>
-        <CardContent>
-          {movs && movs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin movimientos.</p>
-          ) : (
-            <MovTable movs={movs ?? []} />
-          )}
-        </CardContent>
-      </Card>
+      <MovimientosPanel
+        scope={{ sociedadId: id }}
+        filenameHint={`sociedad-${sociedad.name}`}
+      />
     </div>
   );
 }
@@ -253,33 +232,3 @@ function SociosSection({ sociedad, cuentas, onChange }: { sociedad: Sociedad; cu
   );
 }
 
-function MovTable({ movs }: { movs: Movimiento[] }) {
-  return (
-    <table className="w-full text-sm">
-      <thead className="text-muted-foreground">
-        <tr>
-          <th className="text-left font-normal py-1">#</th>
-          <th className="text-left font-normal py-1">Fecha</th>
-          <th className="text-left font-normal py-1">Tipo</th>
-          <th className="text-left font-normal py-1">Origen → Destino</th>
-          <th className="text-right font-normal py-1">Monto</th>
-        </tr>
-      </thead>
-      <tbody>
-        {movs.map((m) => {
-          const origen = m.bancoOrigen?.nombre ?? m.cuentaOrigen?.name ?? '—';
-          const destino = m.bancoDestino?.nombre ?? m.cuentaDestino?.name ?? '—';
-          return (
-            <tr key={m.id} className="border-t hover:bg-muted/30">
-              <td className="py-2 font-mono text-xs">#{m.numero}</td>
-              <td className="py-2">{formatDate(m.fecha)}</td>
-              <td className="py-2">{label(movimientoTipoLabels, m.tipo)}</td>
-              <td className="py-2 text-muted-foreground">{origen} → {destino}</td>
-              <td className="py-2 text-right font-medium">{formatMoney(m.monto, m.moneda)}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  );
-}

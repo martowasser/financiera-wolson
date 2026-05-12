@@ -15,7 +15,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import { label, movimientoTipoLabels, alquilerStatusLabels } from '@/lib/labels';
+import { label, alquilerStatusLabels } from '@/lib/labels';
+import { MovimientosPanel } from '@/components/movimientos-panel';
 
 type Cuenta = { id: string; name: string; identifier: string | null };
 
@@ -35,20 +36,9 @@ type Alquiler = {
   socios: Array<{ cuentaId: string; percentBps: number; cuenta: { id: string; name: string } }>;
 };
 
-type Movimiento = {
-  id: string;
-  numero: number;
-  fecha: string;
-  tipo: string;
-  monto: string;
-  moneda: string;
-  notes: string | null;
-};
-
 export default function AlquilerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: c, refetch } = useQuery<Alquiler>(`/alquileres/${id}`);
-  const { data: movs } = useQuery<Movimiento[]>('/movimientos', { alquilerId: id, limit: 50 });
   const { data: cuentas } = useQuery<Cuenta[]>('/cuentas', { active: 'true' });
   const [finDialogOpen, setFinDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -112,35 +102,10 @@ export default function AlquilerDetailPage({ params }: { params: Promise<{ id: s
 
       <EditarDialog alquiler={c} open={editDialogOpen} onClose={() => setEditDialogOpen(false)} onSaved={() => { setEditDialogOpen(false); refetch(); }} />
 
-      <Card>
-        <CardHeader><CardTitle>Movimientos</CardTitle></CardHeader>
-        <CardContent>
-          {movs && movs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin movimientos.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="text-muted-foreground">
-                <tr>
-                  <th className="text-left font-normal py-1">#</th>
-                  <th className="text-left font-normal py-1">Fecha</th>
-                  <th className="text-left font-normal py-1">Tipo</th>
-                  <th className="text-right font-normal py-1">Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(movs ?? []).map((m) => (
-                  <tr key={m.id} className="border-t hover:bg-muted/30">
-                    <td className="py-2 font-mono text-xs">#{m.numero}</td>
-                    <td className="py-2">{formatDate(m.fecha)}</td>
-                    <td className="py-2">{label(movimientoTipoLabels, m.tipo)}</td>
-                    <td className="py-2 text-right font-medium">{formatMoney(m.monto, m.moneda)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
-      </Card>
+      <MovimientosPanel
+        scope={{ alquilerId: c.id }}
+        filenameHint={`alquiler-${c.numero}`}
+      />
     </div>
   );
 }

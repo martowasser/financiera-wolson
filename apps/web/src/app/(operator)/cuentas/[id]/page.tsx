@@ -1,16 +1,15 @@
 'use client';
 
 import { use } from 'react';
-import Link from 'next/link';
 import { useQuery, useMutation } from '@/lib/hooks';
-import { formatMoney, formatDate } from '@/lib/format';
+import { formatMoney } from '@/lib/format';
 import { formatApiError } from '@/lib/api-errors';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { label, movimientoTipoLabels } from '@/lib/labels';
+import { MovimientosPanel } from '@/components/movimientos-panel';
 import { toast } from 'sonner';
 
 type Cuenta = {
@@ -25,26 +24,9 @@ type Cuenta = {
   createdAt: string;
 };
 
-type Movimiento = {
-  id: string;
-  numero: number;
-  fecha: string;
-  tipo: string;
-  monto: string;
-  moneda: string;
-  notes: string | null;
-  bancoOrigen: { nombre: string } | null;
-  bancoDestino: { nombre: string } | null;
-  cuentaOrigen: { name: string } | null;
-  cuentaDestino: { name: string } | null;
-  sociedad: { name: string } | null;
-  derivadoDe: { id: string; numero: number; tipo: string } | null;
-};
-
 export default function CuentaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: cuenta, refetch } = useQuery<Cuenta>(`/cuentas/${id}`);
-  const { data: movs } = useQuery<Movimiento[]>(`/cuentas/${id}/movimientos`);
   const { mutate: updateCuenta, isLoading: savingOwner } = useMutation<{ isOwner: boolean }, Cuenta>(`/cuentas/${id}`, 'PUT');
 
   async function toggleOwner(next: boolean) {
@@ -118,44 +100,10 @@ export default function CuentaDetailPage({ params }: { params: Promise<{ id: str
         </Card>
       )}
 
-      <Card>
-        <CardHeader><CardTitle>Movimientos</CardTitle></CardHeader>
-        <CardContent>
-          {movs && movs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin movimientos.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="text-muted-foreground">
-                <tr>
-                  <th className="text-left font-normal py-1">#</th>
-                  <th className="text-left font-normal py-1">Fecha</th>
-                  <th className="text-left font-normal py-1">Tipo</th>
-                  <th className="text-left font-normal py-1">Origen → Destino</th>
-                  <th className="text-right font-normal py-1">Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(movs ?? []).map((m) => {
-                  const origen = m.bancoOrigen?.nombre ?? m.cuentaOrigen?.name ?? '—';
-                  const destino = m.bancoDestino?.nombre ?? m.cuentaDestino?.name ?? '—';
-                  const tipoLabel = m.derivadoDe
-                    ? `Reparto de #${m.derivadoDe.numero} · ${label(movimientoTipoLabels, m.derivadoDe.tipo)}`
-                    : label(movimientoTipoLabels, m.tipo);
-                  return (
-                    <tr key={m.id} className="border-t hover:bg-muted/30">
-                      <td className="py-2 font-mono text-xs">#{m.numero}</td>
-                      <td className="py-2">{formatDate(m.fecha)}</td>
-                      <td className="py-2">{tipoLabel}</td>
-                      <td className="py-2 text-muted-foreground">{origen} → {destino}</td>
-                      <td className="py-2 text-right font-medium">{formatMoney(m.monto, m.moneda)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
-      </Card>
+      <MovimientosPanel
+        scope={{ cuentaId: id }}
+        filenameHint={`cuenta-${cuenta.identifier ?? cuenta.name}`}
+      />
     </div>
   );
 }

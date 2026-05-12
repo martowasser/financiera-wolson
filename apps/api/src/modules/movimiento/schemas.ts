@@ -81,8 +81,9 @@ export const listMovimientosQuerySchema = z.object({
   bancoId: z.string().optional(),
   cuentaId: z.string().optional(),
   tipo: movimientoTipoEnum.optional(),
+  moneda: monedaEnum.optional(),
   q: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(500).optional(),
+  limit: z.coerce.number().int().min(1).max(5000).optional(),
 });
 
 export type CreateMovimientoInput = z.infer<typeof createMovimientoSchema>;

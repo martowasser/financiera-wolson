@@ -10,7 +10,6 @@ import { formatMoney, formatDate, formatDateTime } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
@@ -18,42 +17,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { label, movimientoTipoLabels, bucketLabels } from '@/lib/labels';
+import { label, movimientoTipoLabels } from '@/lib/labels';
 import { NewMovimientoForm } from './new-movimiento-form';
+import { MovimientosPanel, legibleSide, type PanelMov } from '@/components/movimientos-panel';
 
-type Mov = {
-  id: string;
-  numero: number;
-  fecha: string;
-  tipo: string;
-  monto: string;
-  moneda: string;
-  origenBucket: string | null;
-  destinoBucket: string | null;
-  notes: string | null;
-  comprobante: string | null;
-  facturado: boolean;
-  bancoOrigen: { id: string; nombre: string } | null;
-  bancoDestino: { id: string; nombre: string } | null;
-  cuentaOrigen: { id: string; name: string } | null;
-  cuentaDestino: { id: string; name: string } | null;
-  cuentaContraparte: { id: string; name: string } | null;
-  sociedad: { id: string; name: string } | null;
-  propiedad: { id: string; nombre: string } | null;
-  alquiler: { id: string; numero: number } | null;
-};
-
-type Filters = {
-  tipo?: string;
-  sociedadId?: string;
-  alquilerId?: string;
-  propiedadId?: string;
-  bancoId?: string;
-  cuentaId?: string;
-  from?: string;
-  to?: string;
-  q?: string;
-};
+type Mov = PanelMov;
 
 export default function MovimientosPage() {
   const router = useRouter();
@@ -61,17 +29,31 @@ export default function MovimientosPage() {
   const newOpen = searchParams.get('new') === '1';
   const selectedId = searchParams.get('id');
 
-  const [filters, setFilters] = useState<Filters>({});
-  const params = { ...filters, limit: 200 };
-
-  const { data: movs, isLoading, refetch } = useQuery<Mov[]>('/movimientos', params);
+  // Refresh tick para forzar refetch del panel después de crear/reversar un mov.
+  const [refreshTick, setRefreshTick] = useState(0);
 
   const { data: selected, refetch: refetchSelected } = useQuery<Mov & { createdAt: string; createdBy: { name: string }; reversoDeId: string | null }>(
     selectedId ? `/movimientos/${selectedId}` : null,
   );
 
-  const closeNew = () => router.replace('/movimientos');
-  const closeDetail = () => router.replace('/movimientos');
+  const closeNew = () => {
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.delete('new');
+    const qs = sp.toString();
+    router.replace(qs ? `/movimientos?${qs}` : '/movimientos');
+  };
+  const closeDetail = () => {
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.delete('id');
+    const qs = sp.toString();
+    router.replace(qs ? `/movimientos?${qs}` : '/movimientos');
+  };
+
+  function openDetail(m: Mov) {
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set('id', m.id);
+    router.replace(`/movimientos?${sp.toString()}`);
+  }
 
   return (
     <div className="space-y-6">
@@ -83,42 +65,10 @@ export default function MovimientosPage() {
         }
       />
 
-      <FiltersBar filters={filters} setFilters={setFilters} />
-
-      <div className="rounded-md border">
-        <table className="w-full text-sm">
-          <thead className="border-b bg-muted/50">
-            <tr>
-              <th className="px-2 py-2 text-left font-medium">#</th>
-              <th className="px-2 py-2 text-left font-medium">Fecha</th>
-              <th className="px-2 py-2 text-left font-medium">Tipo</th>
-              <th className="px-2 py-2 text-right font-medium">Monto</th>
-              <th className="px-2 py-2 text-left font-medium">Origen → Destino</th>
-              <th className="px-2 py-2 text-left font-medium">Contexto</th>
-              <th className="px-2 py-2 text-left font-medium">Notas</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && <tr><td colSpan={7} className="px-2 py-4 text-muted-foreground">Cargando…</td></tr>}
-            {movs && movs.length === 0 && <tr><td colSpan={7} className="px-2 py-4 text-muted-foreground">Sin movimientos.</td></tr>}
-            {(movs ?? []).map((m) => (
-              <tr
-                key={m.id}
-                onClick={() => router.replace(`/movimientos?id=${m.id}`)}
-                className="border-b last:border-0 hover:bg-muted/30 cursor-pointer"
-              >
-                <td className="px-2 py-2 font-mono text-xs">#{m.numero}</td>
-                <td className="px-2 py-2">{formatDate(m.fecha)}</td>
-                <td className="px-2 py-2"><Badge variant="outline">{label(movimientoTipoLabels, m.tipo)}</Badge></td>
-                <td className="px-2 py-2 text-right font-medium">{formatMoney(m.monto, m.moneda)}</td>
-                <td className="px-2 py-2 text-muted-foreground text-xs">{legibleSide(m, 'origen')} → {legibleSide(m, 'destino')}</td>
-                <td className="px-2 py-2 text-xs">{contextoLine(m)}</td>
-                <td className="px-2 py-2 text-xs text-muted-foreground truncate max-w-[220px]">{m.notes ?? ''}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <MovimientosPanel
+        key={refreshTick}
+        onRowClick={openDetail}
+      />
 
       <Dialog open={newOpen} onOpenChange={(v) => { if (!v) closeNew(); }}>
         <DialogContent className="max-w-2xl">
@@ -126,7 +76,7 @@ export default function MovimientosPage() {
           {newOpen && (
             <NewMovimientoForm
               onCancel={closeNew}
-              onSaved={() => { refetch(); closeNew(); }}
+              onSaved={() => { setRefreshTick((t) => t + 1); closeNew(); }}
             />
           )}
         </DialogContent>
@@ -138,69 +88,10 @@ export default function MovimientosPage() {
             <SheetTitle>{selected ? `Movimiento #${selected.numero}` : 'Cargando…'}</SheetTitle>
           </SheetHeader>
           {selected && (
-            <DetailView mov={selected} onChange={() => { refetchSelected(); refetch(); }} />
+            <DetailView mov={selected} onChange={() => { refetchSelected(); setRefreshTick((t) => t + 1); }} />
           )}
         </SheetContent>
       </Sheet>
-    </div>
-  );
-}
-
-function legibleSide(m: Mov, side: 'origen' | 'destino') {
-  const bucket = side === 'origen' ? m.origenBucket : m.destinoBucket;
-  const banco = side === 'origen' ? m.bancoOrigen : m.bancoDestino;
-  const cuenta = side === 'origen' ? m.cuentaOrigen : m.cuentaDestino;
-  if (!bucket) return '—';
-  if (bucket === 'CAJA') return 'Caja';
-  if (bucket === 'BANCO') return `${label(bucketLabels, bucket)} ${banco?.nombre ?? ''}`.trim();
-  if (bucket === 'CUENTA_CORRIENTE') return `${cuenta?.name ?? ''}`;
-  return bucket;
-}
-
-function contextoLine(m: Mov) {
-  const parts: string[] = [];
-  if (m.alquiler) parts.push(`#${m.alquiler.numero}`);
-  if (m.propiedad) parts.push(m.propiedad.nombre);
-  if (m.sociedad) parts.push(m.sociedad.name);
-  if (m.cuentaContraparte) parts.push(m.cuentaContraparte.name);
-  return parts.length ? <span className="text-muted-foreground">{parts.join(' · ')}</span> : <span className="text-muted-foreground">—</span>;
-}
-
-function FiltersBar({ filters, setFilters }: { filters: Filters; setFilters: (f: Filters) => void }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Input
-        placeholder="Buscar en notas o comprobante…"
-        value={filters.q ?? ''}
-        onChange={(e) => setFilters({ ...filters, q: e.target.value || undefined })}
-        className="max-w-sm"
-      />
-      <select
-        value={filters.tipo ?? ''}
-        onChange={(e) => setFilters({ ...filters, tipo: e.target.value || undefined })}
-        className="h-9 rounded-md border bg-background px-3 text-sm"
-      >
-        <option value="">Todos los tipos</option>
-        {Object.keys(movimientoTipoLabels).map((t) => (
-          <option key={t} value={t}>{movimientoTipoLabels[t]}</option>
-        ))}
-      </select>
-      <Input
-        type="date"
-        value={filters.from ?? ''}
-        onChange={(e) => setFilters({ ...filters, from: e.target.value || undefined })}
-        className="w-40"
-      />
-      <span className="text-xs text-muted-foreground">a</span>
-      <Input
-        type="date"
-        value={filters.to ?? ''}
-        onChange={(e) => setFilters({ ...filters, to: e.target.value || undefined })}
-        className="w-40"
-      />
-      {(filters.tipo || filters.from || filters.to || filters.q) && (
-        <Button size="sm" variant="ghost" onClick={() => setFilters({})}>Limpiar</Button>
-      )}
     </div>
   );
 }
