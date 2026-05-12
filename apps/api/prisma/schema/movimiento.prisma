@@ -38,6 +38,12 @@ model Movimiento {
   reversadoPor Movimiento?  @relation("MovimientoReverso", fields: [reversoDeId], references: [id])
   reversos    Movimiento[]  @relation("MovimientoReverso")
 
+  // Reparto a CC de socios: cuando un mov toca BANCO, generamos N filas hijas
+  // tipo=REPARTO_SOCIO con derivadoDeId=parent.id que mueven cuenta.saldoArs/Usd.
+  derivadoDeId String?
+  derivadoDe   Movimiento?  @relation("MovimientoDerivado", fields: [derivadoDeId], references: [id])
+  derivados    Movimiento[] @relation("MovimientoDerivado")
+
   createdAt   DateTime @default(now())
   createdById String
   createdBy   User     @relation("MovimientoCreadoPor", fields: [createdById], references: [id])
@@ -63,6 +69,7 @@ model Movimiento {
   @@index([destinoBancoId])
   @@index([origenCuentaId])
   @@index([destinoCuentaId])
+  @@index([derivadoDeId])
 }
 
 enum BucketTipo {
@@ -83,4 +90,7 @@ enum MovimientoTipo {
   RECUPERO
   AJUSTE
   OTRO
+  // Fila hija generada automáticamente para reflejar reparto a CC de un socio.
+  // No se crea directamente desde la API — siempre tiene derivadoDeId != null.
+  REPARTO_SOCIO
 }

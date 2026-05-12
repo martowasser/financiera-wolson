@@ -4,12 +4,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@/lib/hooks';
 import { apiFetch, ApiError } from '@/lib/api';
 import { formatApiError } from '@/lib/api-errors';
-import { inputToCentavos } from '@/lib/format';
+import { inputToCentavos, formatMoney } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { movimientoTipoLabels, bucketLabels, label } from '@/lib/labels';
 
@@ -46,11 +47,14 @@ const RULES: Record<string, {
 
 const TIPOS = Object.keys(RULES);
 
-type Banco = { id: string; nombre: string; numero: string };
+type Banco = { id: string; nombre: string; numero: string; sociedad: { id: string; name: string } };
 type Cuenta = { id: string; name: string; identifier: string | null };
-type Sociedad = { id: string; name: string };
+type SocioRef = { cuentaId: string; percentBps: number; cuenta: { id: string; name: string } };
+type Sociedad = { id: string; name: string; socios?: SocioRef[] };
 type Propiedad = { id: string; nombre: string; direccion: string };
 type Alquiler = { id: string; numero: number; propiedad: { nombre: string }; inquilino: { name: string } };
+
+type RepartoRow = { cuentaId: string; monto: string };
 
 export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: number) => void; onCancel: () => void }) {
   const [tipo, setTipo] = useState<string | null>(null);
@@ -67,6 +71,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
   const [propiedadId, setPropiedadId] = useState('');
   const [alquilerId, setAlquilerId] = useState('');
   const [cuentaContraparteId, setCuentaContraparteId] = useState('');
+  const [reparto, setReparto] = useState<RepartoRow[]>([]);
   const [comprobante, setComprobante] = useState('');
   const [facturado, setFacturado] = useState(false);
   const [notes, setNotes] = useState('');
@@ -74,7 +79,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
 
   const { data: bancos } = useQuery<Banco[]>('/bancos', { active: 'true' });
   const { data: cuentas } = useQuery<Cuenta[]>('/cuentas', { active: 'true' });
-  const { data: sociedades } = useQuery<Sociedad[]>('/sociedades');
+  const { data: sociedades } = useQuery<Sociedad[]>('/sociedades', { includeSocios: 'true' });
   const { data: propiedades } = useQuery<Propiedad[]>('/propiedades', { active: 'true' });
   const { data: alquileres } = useQuery<Alquiler[]>('/alquileres', { status: 'ACTIVO' });
 
@@ -97,6 +102,70 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
   }, [fecha]);
 
   const rule = tipo ? RULES[tipo] : null;
+
+  // ¿El movimiento toca un BANCO en algún lado? En ese caso (y siempre que no sea
+  // ALQUILER_COBRO, que reparte automáticamente vía alquiler.socios) tenemos que
+  // mostrar el editor de reparto.
+  const bancoSideSociedad = useMemo<{ id: string; socios: SocioRef[] } | null>(() => {
+    if (!tipo || tipo === 'ALQUILER_COBRO') return null;
+    let bancoId = '';
+    if (origenBucket === 'BANCO' && origenBancoId) bancoId = origenBancoId;
+    else if (destinoBucket === 'BANCO' && destinoBancoId) bancoId = destinoBancoId;
+    if (!bancoId) return null;
+    const banco = (bancos ?? []).find((b) => b.id === bancoId);
+    if (!banco) return null;
+    const soc = (sociedades ?? []).find((s) => s.id === banco.sociedad.id);
+    if (!soc || !soc.socios) return null;
+    return { id: soc.id, socios: soc.socios };
+  }, [tipo, origenBucket, origenBancoId, destinoBucket, destinoBancoId, bancos, sociedades]);
+
+  const showReparto = bancoSideSociedad !== null;
+
+  // Pre-llenar el reparto cuando cambia la sociedad o el monto. No pisa edits
+  // manuales: si el usuario tocó algún row, no reseteamos.
+  const ZERO = BigInt(0);
+  const ONE = BigInt(1);
+  const TEN_K = BigInt(10000);
+  const montoCentavos = useMemo(() => {
+    if (!monto.trim() || parseFloat(monto) <= 0) return ZERO;
+    try { return BigInt(inputToCentavos(monto)); } catch { return ZERO; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monto]);
+
+  useEffect(() => {
+    if (!showReparto || !bancoSideSociedad) {
+      setReparto([]);
+      return;
+    }
+    if (montoCentavos === ZERO) return;
+    // Largest-remainder distribution local — coincide con el del backend.
+    const socios = bancoSideSociedad.socios;
+    const results: { cuentaId: string; amount: bigint; remainder: bigint }[] = socios.map((s) => {
+      const base = (montoCentavos * BigInt(s.percentBps)) / TEN_K;
+      const rem = montoCentavos * BigInt(s.percentBps) - base * TEN_K;
+      return { cuentaId: s.cuentaId, amount: base, remainder: rem };
+    });
+    const allocated = results.reduce((sum, r) => sum + r.amount, ZERO);
+    let remaining = montoCentavos - allocated;
+    const sorted = [...results].sort((a, b) => (b.remainder > a.remainder ? 1 : b.remainder < a.remainder ? -1 : 0));
+    for (const e of sorted) { if (remaining <= ZERO) break; e.amount += ONE; remaining -= ONE; }
+    setReparto(results.map((r) => ({ cuentaId: r.cuentaId, monto: (Number(r.amount) / 100).toFixed(2) })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bancoSideSociedad?.id, montoCentavos, showReparto]);
+
+  const repartoSum = useMemo(() => {
+    return reparto.reduce((acc, r) => {
+      if (!r.monto.trim()) return acc;
+      try { return acc + BigInt(inputToCentavos(r.monto)); } catch { return acc; }
+    }, ZERO);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reparto]);
+
+  const repartoValid = !showReparto || (
+    reparto.length > 0
+    && reparto.every((r) => r.cuentaId && r.monto.trim() !== '')
+    && repartoSum === montoCentavos
+  );
 
   const canSubmit = useMemo(() => {
     if (!rule) return false;
@@ -123,8 +192,9 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
     } else {
       if (!origenBucket && !destinoBucket) return false;
     }
+    if (!repartoValid) return false;
     return true;
-  }, [rule, cajaCheck, monto, notes, alquilerId, propiedadId, sociedadId, origenBucket, origenBancoId, origenCuentaId, destinoBucket, destinoBancoId, destinoCuentaId]);
+  }, [rule, cajaCheck, monto, notes, alquilerId, propiedadId, sociedadId, origenBucket, origenBancoId, origenCuentaId, destinoBucket, destinoBancoId, destinoCuentaId, repartoValid]);
 
   async function submit() {
     if (!tipo || !rule) return;
@@ -150,6 +220,11 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
       if (propiedadId) body.propiedadId = propiedadId;
       if (alquilerId) body.alquilerId = alquilerId;
       if (cuentaContraparteId) body.cuentaContraparteId = cuentaContraparteId;
+      if (showReparto && reparto.length > 0) {
+        body.repartoSocios = reparto
+          .filter((r) => r.cuentaId && r.monto.trim() !== '')
+          .map((r) => ({ cuentaId: r.cuentaId, monto: inputToCentavos(r.monto) }));
+      }
       if (comprobante.trim()) body.comprobante = comprobante.trim();
       if (facturado) body.facturado = true;
       if (notes.trim()) body.notes = notes.trim();
@@ -335,7 +410,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
           </select>
         </div>
       )}
-      {rule!.allowContraparte && (
+      {rule!.allowContraparte && !showReparto && (
         <div>
           <Label>Contraparte (opcional)</Label>
           <select value={cuentaContraparteId} onChange={(e) => setCuentaContraparteId(e.target.value)}
@@ -343,6 +418,50 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
             <option value="">—</option>
             {(cuentas ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+        </div>
+      )}
+
+      {showReparto && (
+        <div className="rounded-md border p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs uppercase text-muted-foreground">Atribuir a cuentas</Label>
+            <Button size="sm" variant="ghost" type="button"
+              onClick={() => setReparto((rs) => [...rs, { cuentaId: '', monto: '' }])}>
+              <Plus className="h-4 w-4" /> Agregar
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Pre-llenado por los socios de la sociedad. Editá los montos o cambiá la cuenta si va a otro.
+          </p>
+          {reparto.map((r, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <select
+                value={r.cuentaId}
+                onChange={(e) => setReparto((rs) => rs.map((x, i) => i === idx ? { ...x, cuentaId: e.target.value } : x))}
+                className="flex-1 h-9 rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="">— Cuenta —</option>
+                {(cuentas ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <Input
+                type="number" step="0.01" min="0"
+                value={r.monto}
+                onChange={(e) => setReparto((rs) => rs.map((x, i) => i === idx ? { ...x, monto: e.target.value } : x))}
+                className="w-32"
+                placeholder="0.00"
+              />
+              <Button size="icon" variant="ghost" type="button"
+                onClick={() => setReparto((rs) => rs.filter((_, i) => i !== idx))}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <div className="flex items-center justify-between text-xs pt-1">
+            <span className={repartoSum === montoCentavos ? 'text-muted-foreground' : 'text-red-600'}>
+              Suma: {formatMoney(repartoSum.toString(), moneda)} / {formatMoney(montoCentavos.toString(), moneda)}
+              {repartoSum === montoCentavos ? ' ✓' : ' (debe coincidir con el monto)'}
+            </span>
+          </div>
         </div>
       )}
 

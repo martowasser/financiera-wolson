@@ -1,7 +1,8 @@
 import prisma from '../../lib/prisma.js';
 import { conflict, notFound, unprocessable } from '../../lib/errors.js';
-import type { CreateMovimientoInput, UpdateMovimientoInput } from './schemas.js';
+import type { CreateMovimientoInput, UpdateMovimientoInput, RepartoEntry } from './schemas.js';
 import type { Prisma, BucketTipo, Moneda, MovimientoTipo } from '@prisma/client';
+import { distribute } from '../../lib/distribute.js';
 
 type Side = { bucket?: BucketTipo; bancoId?: string; cuentaId?: string };
 
@@ -36,6 +37,8 @@ const RULES: Record<MovimientoTipo, TipoRule> = {
   RECUPERO:          { flow: 'I', destinoAllowed: ['CAJA', 'BANCO', 'CUENTA_CORRIENTE'] },
   AJUSTE:            { flow: 'F', requireNotes: true },
   OTRO:              { flow: 'F', requireNotes: true },
+  // REPARTO_SOCIO no se crea via API directa — solo lo emite buildRepartoChildren.
+  REPARTO_SOCIO:     { flow: 'F' },
 };
 
 function validateSide(side: 'origen' | 'destino', s: Side, allowed?: BucketTipo[]) {
@@ -111,7 +114,169 @@ async function applyDelta(
   }
 }
 
+// Reparto: para cada lado del parent que toca BANCO, genera filas hijas
+// REPARTO_SOCIO con destino/origen en la CUENTA_CORRIENTE de cada socio
+// (o del reparto explícito que pasó el caller) y aplica el delta a esas CCs.
+//
+// Cuándo se usa:
+//   - tipo=ALQUILER_COBRO: SIEMPRE, prorrateado por alquiler.socios (regardless del bucket).
+//     El caller no debería pasar repartoSocios — si pasa, se ignora.
+//   - Otros tipos con bucket=BANCO en algún lado: usa input.repartoSocios si vino,
+//     o default = sociedad.socios del banco prorrateados por percentBps.
+//
+// Para ALQUILER_COBRO destino=CAJA, igual reparte: el socio queda acreedor aunque
+// la plata esté en caja todavía.
+async function buildRepartoChildren(
+  tx: Prisma.TransactionClient,
+  parent: {
+    id: string;
+    tipo: MovimientoTipo;
+    monto: bigint;
+    moneda: Moneda;
+    fecha: Date;
+    cajaDiaId: string;
+    alquilerId: string | null;
+    propiedadId: string | null;
+    origenBucket: BucketTipo | null;
+    origenBancoId: string | null;
+    destinoBucket: BucketTipo | null;
+    destinoBancoId: string | null;
+  },
+  repartoSocios: RepartoEntry[] | undefined,
+  userId: string,
+) {
+  // Lados donde "se reparte". Para ALQUILER_COBRO incluye CAJA también — la plata
+  // del alquiler le corresponde al socio aunque haya caído en caja.
+  type SideKey = 'origen' | 'destino';
+  const repartoSides: { key: SideKey; bancoId: string | null; sociedadId: string | null }[] = [];
+
+  const isAlquilerCobro = parent.tipo === 'ALQUILER_COBRO';
+
+  for (const key of ['origen', 'destino'] as const) {
+    const bucket = key === 'origen' ? parent.origenBucket : parent.destinoBucket;
+    const bancoId = key === 'origen' ? parent.origenBancoId : parent.destinoBancoId;
+    if (bucket === 'BANCO') {
+      repartoSides.push({ key, bancoId, sociedadId: null });
+    } else if (bucket === 'CAJA' && isAlquilerCobro) {
+      // ALQUILER_COBRO destino=CAJA: igual reparte. No tiene banco asociado.
+      repartoSides.push({ key, bancoId: null, sociedadId: null });
+    }
+  }
+
+  if (repartoSides.length === 0) return;
+
+  // Resolver sociedadId para cada lado.
+  for (const s of repartoSides) {
+    if (s.bancoId) {
+      const banco = await tx.banco.findUnique({ where: { id: s.bancoId } });
+      s.sociedadId = banco?.sociedadId ?? null;
+    }
+  }
+
+  for (const sideInfo of repartoSides) {
+    let reparto: { cuentaId: string; monto: bigint }[];
+
+    if (isAlquilerCobro) {
+      if (!parent.alquilerId) {
+        throw unprocessable('ALQUILER_COBRO sin alquilerId no puede repartir', 'REPARTO_NO_ALQUILER');
+      }
+      const socios = await tx.alquilerSocio.findMany({ where: { alquilerId: parent.alquilerId } });
+      if (socios.length === 0) {
+        throw unprocessable('Alquiler sin socios; no se puede repartir', 'REPARTO_ALQUILER_SIN_SOCIOS');
+      }
+      const dist = distribute(parent.monto, socios.map((s) => ({ ownerId: s.cuentaId, percentBps: s.percentBps })));
+      reparto = dist.map((d) => ({ cuentaId: d.ownerId, monto: d.amount }));
+    } else if (repartoSocios && repartoSocios.length > 0) {
+      const seen = new Set<string>();
+      for (const r of repartoSocios) {
+        if (seen.has(r.cuentaId)) {
+          throw unprocessable(`Reparto duplica cuenta ${r.cuentaId}`, 'REPARTO_DUPLICATE');
+        }
+        seen.add(r.cuentaId);
+      }
+      const sum = repartoSocios.reduce((acc, r) => acc + BigInt(r.monto), 0n);
+      if (sum !== parent.monto) {
+        throw unprocessable(
+          `La suma del reparto (${sum}) debe coincidir con el monto del movimiento (${parent.monto})`,
+          'REPARTO_SUM_MISMATCH',
+        );
+      }
+      reparto = repartoSocios.map((r) => ({ cuentaId: r.cuentaId, monto: BigInt(r.monto) }));
+    } else {
+      // Default: sociedad.socios del banco
+      if (!sideInfo.sociedadId) {
+        throw unprocessable('No se puede inferir sociedad para el reparto', 'REPARTO_NO_SOCIEDAD');
+      }
+      const sociedad = await tx.sociedad.findUnique({
+        where: { id: sideInfo.sociedadId },
+        include: { socios: true },
+      });
+      if (!sociedad || sociedad.socios.length === 0) {
+        throw unprocessable(
+          'La sociedad no tiene socios; pasá repartoSocios explícito o cargá socios en la sociedad',
+          'REPARTO_NO_SOCIOS',
+        );
+      }
+      const dist = distribute(parent.monto, sociedad.socios.map((s) => ({ ownerId: s.cuentaId, percentBps: s.percentBps })));
+      reparto = dist.map((d) => ({ cuentaId: d.ownerId, monto: d.amount }));
+    }
+
+    // Validar que cuentas del reparto existan y estén activas.
+    const cuentaIds = reparto.filter((r) => r.monto > 0n).map((r) => r.cuentaId);
+    if (cuentaIds.length > 0) {
+      const cuentas = await tx.cuenta.findMany({
+        where: { id: { in: cuentaIds }, deletedAt: null, isActive: true },
+        select: { id: true },
+      });
+      if (cuentas.length !== cuentaIds.length) {
+        throw unprocessable(
+          'Una cuenta del reparto no existe o está inactiva',
+          'REPARTO_CUENTA_INVALID',
+        );
+      }
+    }
+
+    // Crear filas hijas + aplicar delta a la CC.
+    for (const r of reparto) {
+      if (r.monto === 0n) continue;
+      const childData: Prisma.MovimientoCreateInput = {
+        fecha: parent.fecha,
+        cajaDia: { connect: { id: parent.cajaDiaId } },
+        tipo: 'REPARTO_SOCIO',
+        monto: r.monto,
+        moneda: parent.moneda,
+        derivadoDe: { connect: { id: parent.id } },
+        createdBy: { connect: { id: userId } },
+        ...(parent.alquilerId ? { alquiler: { connect: { id: parent.alquilerId } } } : {}),
+        ...(parent.propiedadId ? { propiedad: { connect: { id: parent.propiedadId } } } : {}),
+        ...(sideInfo.sociedadId ? { sociedad: { connect: { id: sideInfo.sociedadId } } } : {}),
+        ...(sideInfo.key === 'destino'
+          ? {
+              destinoBucket: 'CUENTA_CORRIENTE',
+              cuentaDestino: { connect: { id: r.cuentaId } },
+            }
+          : {
+              origenBucket: 'CUENTA_CORRIENTE',
+              cuentaOrigen: { connect: { id: r.cuentaId } },
+            }),
+      };
+      await tx.movimiento.create({ data: childData });
+
+      const sign = sideInfo.key === 'destino' ? 1n : -1n;
+      const field = parent.moneda === 'ARS' ? 'saldoArs' : 'saldoUsd';
+      await tx.cuenta.update({
+        where: { id: r.cuentaId },
+        data: { [field]: { increment: sign * r.monto } },
+      });
+    }
+  }
+}
+
 export async function createMovimiento(input: CreateMovimientoInput, userId: string) {
+  // REPARTO_SOCIO no se crea por API directa — solo lo emite buildRepartoChildren.
+  if (input.tipo === 'REPARTO_SOCIO') {
+    throw unprocessable('REPARTO_SOCIO no se crea directamente', 'REPARTO_SOCIO_NO_DIRECT');
+  }
   const rule = RULES[input.tipo];
 
   const origen: Side = {
@@ -243,6 +408,27 @@ export async function createMovimiento(input: CreateMovimientoInput, userId: str
     if (origen.bucket) await applyDelta(tx, origen, input.moneda, -input.monto);
     if (destino.bucket) await applyDelta(tx, destino, input.moneda, input.monto);
 
+    // Reparto a CC de socios (filas hijas REPARTO_SOCIO).
+    await buildRepartoChildren(
+      tx,
+      {
+        id: created.id,
+        tipo: created.tipo,
+        monto: created.monto,
+        moneda: created.moneda,
+        fecha: created.fecha,
+        cajaDiaId: created.cajaDiaId,
+        alquilerId: created.alquilerId,
+        propiedadId: created.propiedadId,
+        origenBucket: created.origenBucket,
+        origenBancoId: created.origenBancoId,
+        destinoBucket: created.destinoBucket,
+        destinoBancoId: created.destinoBancoId,
+      },
+      input.repartoSocios,
+      userId,
+    );
+
     return created;
   }, { isolationLevel: 'Serializable' });
 }
@@ -251,6 +437,9 @@ export async function reversarMovimiento(id: string, motivo: string, userId: str
   return prisma.$transaction(async (tx) => {
     const original = await tx.movimiento.findUnique({ where: { id } });
     if (!original) throw notFound('Movimiento no encontrado');
+    if (original.tipo === 'REPARTO_SOCIO' || original.derivadoDeId) {
+      throw conflict('No se puede reversar una fila de reparto directamente; reversá el movimiento padre', 'MOV_IS_DERIVADO');
+    }
     if (original.reversoDeId) {
       throw conflict('No se puede reversar un movimiento que ya es un reverso', 'MOV_IS_REVERSO');
     }
@@ -296,6 +485,46 @@ export async function reversarMovimiento(id: string, motivo: string, userId: str
     if (newOrigen.bucket)  await applyDelta(tx, newOrigen,  original.moneda, -original.monto);
     if (newDestino.bucket) await applyDelta(tx, newDestino, original.moneda,  original.monto);
 
+    // Reversar las filas hijas REPARTO_SOCIO del original: por cada hijo creamos
+    // un hijo del reverso con el side opuesto y el mismo monto, y aplicamos el
+    // delta opuesto a la CC del socio.
+    const originalChildren = await tx.movimiento.findMany({
+      where: { derivadoDeId: original.id },
+    });
+    for (const child of originalChildren) {
+      const wasDestino = child.destinoBucket === 'CUENTA_CORRIENTE';
+      const cuentaId = wasDestino ? child.destinoCuentaId! : child.origenCuentaId!;
+      await tx.movimiento.create({
+        data: {
+          fecha: cajaDia.fecha,
+          cajaDia: { connect: { id: cajaDia.id } },
+          tipo: 'REPARTO_SOCIO',
+          monto: child.monto,
+          moneda: child.moneda,
+          derivadoDe: { connect: { id: reverso.id } },
+          createdBy: { connect: { id: userId } },
+          ...(child.alquilerId ? { alquiler: { connect: { id: child.alquilerId } } } : {}),
+          ...(child.propiedadId ? { propiedad: { connect: { id: child.propiedadId } } } : {}),
+          ...(child.sociedadId ? { sociedad: { connect: { id: child.sociedadId } } } : {}),
+          ...(wasDestino
+            ? {
+                origenBucket: 'CUENTA_CORRIENTE',
+                cuentaOrigen: { connect: { id: cuentaId } },
+              }
+            : {
+                destinoBucket: 'CUENTA_CORRIENTE',
+                cuentaDestino: { connect: { id: cuentaId } },
+              }),
+        },
+      });
+      const sign = wasDestino ? -1n : 1n;
+      const field = child.moneda === 'ARS' ? 'saldoArs' : 'saldoUsd';
+      await tx.cuenta.update({
+        where: { id: cuentaId },
+        data: { [field]: { increment: sign * child.monto } },
+      });
+    }
+
     return reverso;
   }, { isolationLevel: 'Serializable' });
 }
@@ -314,6 +543,12 @@ export async function listMovimientos(opts: {
   limit?: number;
 }) {
   const where: Prisma.MovimientoWhereInput = {};
+
+  // Hide REPARTO_SOCIO children unless the caller filters by cuentaId
+  // (in that case the reparto is precisely what they want to see).
+  if (!opts.cuentaId && opts.tipo !== 'REPARTO_SOCIO') {
+    where.derivadoDeId = null;
+  }
   if (opts.fecha) {
     where.fecha = new Date(`${opts.fecha}T00:00:00.000Z`);
   } else if (opts.from || opts.to) {
@@ -370,6 +605,7 @@ export async function listMovimientos(opts: {
       sociedad: { select: { id: true, name: true } },
       propiedad:{ select: { id: true, nombre: true } },
       alquiler: { select: { id: true, numero: true } },
+      derivadoDe: { select: { id: true, numero: true, tipo: true } },
     },
   });
 }
@@ -388,6 +624,15 @@ export async function getMovimiento(id: string) {
       alquiler: { include: { propiedad: true, inquilino: true } },
       cajaDia: true,
       createdBy: { select: { id: true, username: true, name: true } },
+      derivadoDe: { select: { id: true, numero: true, tipo: true } },
+      derivados: {
+        select: {
+          id: true, numero: true, monto: true, moneda: true,
+          origenBucket: true, destinoBucket: true,
+          cuentaOrigen: { select: { id: true, name: true } },
+          cuentaDestino: { select: { id: true, name: true } },
+        },
+      },
     },
   });
   if (!mov) throw notFound('Movimiento no encontrado');

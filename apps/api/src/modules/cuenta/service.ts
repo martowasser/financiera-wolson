@@ -97,6 +97,7 @@ export async function getCuentaMovimientos(id: string, opts: { from?: string; to
       cuentaDestino: { select: { id: true, name: true } },
       sociedad: { select: { id: true, name: true } },
       alquiler: { select: { id: true, numero: true } },
+      derivadoDe: { select: { id: true, numero: true, tipo: true } },
     },
   });
 }

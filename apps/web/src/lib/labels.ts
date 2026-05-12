@@ -12,6 +12,7 @@ export const movimientoTipoLabels: Record<string, string> = {
   RECUPERO:          'Recupero',
   AJUSTE:            'Ajuste',
   OTRO:              'Otro',
+  REPARTO_SOCIO:     'Reparto a socio',
 };
 
 export const bucketLabels: Record<string, string> = {

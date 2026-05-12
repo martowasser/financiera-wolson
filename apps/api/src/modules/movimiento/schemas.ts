@@ -17,7 +17,15 @@ export const movimientoTipoEnum = z.enum([
   'RECUPERO',
   'AJUSTE',
   'OTRO',
+  // Fila hija generada al repartir un mov que toca BANCO. No se pasa en createMovimiento.
+  'REPARTO_SOCIO',
 ]);
+
+const repartoEntrySchema = z.object({
+  cuentaId: z.string(),
+  monto: positiveBigintString,
+});
+export type RepartoEntry = z.infer<typeof repartoEntrySchema>;
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'fecha must be YYYY-MM-DD');
 
@@ -45,6 +53,12 @@ export const createMovimientoSchema = z.object({
   comprobante: nullishString,
   facturado: z.boolean().optional(),
   notes: nullishString,
+
+  // Reparto a CC de socios. Cuando un mov toca BANCO (origen o destino) y no es
+  // ALQUILER_COBRO (que se reparte siempre por alquiler.socios automáticamente),
+  // se usa este array para distribuir el monto entre cuentas. Default si se
+  // omite: socios de la sociedad del banco prorrateados por percentBps.
+  repartoSocios: z.array(repartoEntrySchema).optional(),
 });
 
 export const updateMovimientoSchema = z.object({

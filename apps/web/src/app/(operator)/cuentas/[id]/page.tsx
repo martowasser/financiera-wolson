@@ -38,6 +38,7 @@ type Movimiento = {
   cuentaOrigen: { name: string } | null;
   cuentaDestino: { name: string } | null;
   sociedad: { name: string } | null;
+  derivadoDe: { id: string; numero: number; tipo: string } | null;
 };
 
 export default function CuentaDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -137,11 +138,14 @@ export default function CuentaDetailPage({ params }: { params: Promise<{ id: str
                 {(movs ?? []).map((m) => {
                   const origen = m.bancoOrigen?.nombre ?? m.cuentaOrigen?.name ?? '—';
                   const destino = m.bancoDestino?.nombre ?? m.cuentaDestino?.name ?? '—';
+                  const tipoLabel = m.derivadoDe
+                    ? `Reparto de #${m.derivadoDe.numero} · ${label(movimientoTipoLabels, m.derivadoDe.tipo)}`
+                    : label(movimientoTipoLabels, m.tipo);
                   return (
                     <tr key={m.id} className="border-t hover:bg-muted/30">
                       <td className="py-2 font-mono text-xs">#{m.numero}</td>
                       <td className="py-2">{formatDate(m.fecha)}</td>
-                      <td className="py-2">{label(movimientoTipoLabels, m.tipo)}</td>
+                      <td className="py-2">{tipoLabel}</td>
                       <td className="py-2 text-muted-foreground">{origen} → {destino}</td>
                       <td className="py-2 text-right font-medium">{formatMoney(m.monto, m.moneda)}</td>
                     </tr>
