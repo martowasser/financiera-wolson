@@ -6,14 +6,21 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  const password = await bcrypt.hash('admin123', 12);
+  const users = [
+    { username: 'admin', password: 'admin123', name: 'Administrador', role: 'ADMIN' as const },
+    { username: 'mariana', password: 'mariana123', name: 'Mariana', role: 'ADMIN' as const },
+    { username: 'alberto', password: 'alberto123', name: 'Alberto', role: 'VIEWER' as const },
+  ];
 
   await prisma.user.createMany({
-    data: [
-      { username: 'admin', password, name: 'Administrador', role: 'ADMIN' },
-      { username: 'mariana', password, name: 'Mariana', role: 'ADMIN' },
-      { username: 'alberto', password, name: 'Alberto', role: 'VIEWER' },
-    ],
+    data: await Promise.all(
+      users.map(async (u) => ({
+        username: u.username,
+        password: await bcrypt.hash(u.password, 12),
+        name: u.name,
+        role: u.role,
+      })),
+    ),
     skipDuplicates: true,
   });
 
@@ -28,7 +35,7 @@ async function main() {
   });
 
   console.log('Seed mínimo completado: 3 usuarios + 1 cuenta Financiera.');
-  console.log('Login: admin / mariana / alberto (password: admin123).');
+  console.log('Login: admin/admin123 · mariana/mariana123 · alberto/alberto123.');
 }
 
 main()
