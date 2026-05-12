@@ -14,8 +14,10 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:admin": "tsx prisma/seed-admin.ts",
+    "db:seed:demo": "tsx prisma/seed.ts && tsx prisma/seed-demo.ts",
     "db:reset": "prisma migrate reset --force",
-    "db:reset:admin": "prisma migrate reset --force --skip-seed && tsx prisma/seed-admin.ts"
+    "db:reset:admin": "prisma migrate reset --force --skip-seed && tsx prisma/seed-admin.ts",
+    "db:reset:demo": "prisma migrate reset --force --skip-seed && tsx prisma/seed.ts && tsx prisma/seed-demo.ts"
   },
   "prisma": {
     "schema": "prisma/schema",

@@ -1,0 +1,40 @@
+# Render Blueprint para Financiera POC.
+# Deploya la API (Fastify/Node) + Postgres managed.
+# El frontend vive en Vercel y se conecta a esta API via NEXT_PUBLIC_API_URL.
+#
+# Doc: https://render.com/docs/blueprint-spec
+
+databases:
+  - name: financiera-db
+    databaseName: financiero
+    user: financiero
+    plan: starter
+    region: oregon
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: financiera-api
+    runtime: node
+    plan: starter
+    region: oregon
+    rootDir: .
+    buildCommand: |
+      corepack enable
+      pnpm install --frozen-lockfile
+      pnpm --filter @financiero/api db:generate
+      pnpm --filter @financiero/api build
+    preDeployCommand: pnpm --filter @financiero/api db:migrate:deploy
+    startCommand: pnpm --filter @financiero/api start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: financiera-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false  # se setea a mano en el dashboard con la URL de Vercel
