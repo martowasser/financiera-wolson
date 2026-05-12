@@ -124,6 +124,10 @@ export function MovimientosPanel({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="outline" onClick={downloadCsv} disabled={downloading}>
+          <Download className="h-4 w-4" /> {downloading ? 'Descargando…' : 'Descargar CSV'}
+        </Button>
+        <div className="h-6 w-px bg-border mx-1" />
         {show('q') && (
           <Input
             placeholder="Buscar en notas o comprobante…"
@@ -177,11 +181,6 @@ export function MovimientosPanel({
         {hasAnyFilter && (
           <Button size="sm" variant="ghost" onClick={clearFilters}>Limpiar</Button>
         )}
-        <div className="ml-auto">
-          <Button size="sm" variant="outline" onClick={downloadCsv} disabled={downloading}>
-            <Download className="h-4 w-4" /> {downloading ? 'Descargando…' : 'Descargar CSV'}
-          </Button>
-        </div>
       </div>
 
       <div className="rounded-md border">
