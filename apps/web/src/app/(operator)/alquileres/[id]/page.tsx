@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { label, movimientoTipoLabels, alquilerStatusLabels } from '@/lib/labels';
 
@@ -51,6 +51,7 @@ export default function AlquilerDetailPage({ params }: { params: Promise<{ id: s
   const { data: movs } = useQuery<Movimiento[]>('/movimientos', { alquilerId: id, limit: 50 });
   const { data: cuentas } = useQuery<Cuenta[]>('/cuentas', { active: 'true' });
   const [finDialogOpen, setFinDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   if (!c) return <div className="text-muted-foreground">Cargando…</div>;
 
@@ -75,7 +76,12 @@ export default function AlquilerDetailPage({ params }: { params: Promise<{ id: s
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
-          <CardHeader><CardTitle className="text-sm">Datos</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm">Datos</CardTitle>
+            <Button size="sm" variant="ghost" onClick={() => setEditDialogOpen(true)}>
+              <Pencil className="h-4 w-4" /> Editar
+            </Button>
+          </CardHeader>
           <CardContent className="space-y-1 text-sm">
             <div><span className="text-muted-foreground">Monto:</span> {formatMoney(c.monto, c.moneda)}</div>
             <div><span className="text-muted-foreground">Inicio:</span> {formatDate(c.fechaInicio)}</div>
@@ -103,6 +109,8 @@ export default function AlquilerDetailPage({ params }: { params: Promise<{ id: s
       )}
 
       <FinalizarDialog alquilerId={c.id} open={finDialogOpen} onClose={() => setFinDialogOpen(false)} onSaved={() => { setFinDialogOpen(false); refetch(); }} />
+
+      <EditarDialog alquiler={c} open={editDialogOpen} onClose={() => setEditDialogOpen(false)} onSaved={() => { setEditDialogOpen(false); refetch(); }} />
 
       <Card>
         <CardHeader><CardTitle>Movimientos</CardTitle></CardHeader>
@@ -213,6 +221,93 @@ function SociosSection({ alquiler, cuentas, onChange }: { alquiler: Alquiler; cu
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function EditarDialog({ alquiler, open, onClose, onSaved }: { alquiler: Alquiler; open: boolean; onClose: () => void; onSaved: () => void }) {
+  const [monto, setMonto] = useState('');
+  const [moneda, setMoneda] = useState<'ARS' | 'USD'>('ARS');
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
+  const [notes, setNotes] = useState('');
+  const save = useMutation<Record<string, unknown>, unknown>(`/alquileres/${alquiler.id}`, 'PUT');
+
+  useEffect(() => {
+    if (!open) return;
+    setMonto(alquiler.monto);
+    setMoneda(alquiler.moneda);
+    setFechaInicio(alquiler.fechaInicio.slice(0, 10));
+    setFechaFin(alquiler.fechaFin ? alquiler.fechaFin.slice(0, 10) : '');
+    setNotes(alquiler.notes ?? '');
+  }, [open, alquiler]);
+
+  const montoValid = /^\d+$/.test(monto.trim());
+  const canSave = montoValid && fechaInicio.trim() !== '';
+
+  async function submit() {
+    if (!canSave) return;
+    try {
+      await save.mutate({
+        monto: monto.trim(),
+        moneda,
+        fechaInicio,
+        fechaFin: fechaFin.trim() === '' ? null : fechaFin,
+        notes: notes.trim() === '' ? null : notes,
+      });
+      toast.success('Alquiler actualizado');
+      onSaved();
+    } catch (e) {
+      toast.error(formatApiError(e));
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Editar alquiler</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <div>
+              <Label>Monto</Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={monto}
+                onChange={(e) => setMonto(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <Label>Moneda</Label>
+              <select
+                value={moneda}
+                onChange={(e) => setMoneda(e.target.value as 'ARS' | 'USD')}
+                className="h-9 rounded-md border bg-transparent px-2 text-sm"
+              >
+                <option value="ARS">ARS</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <Label>Fecha de inicio</Label>
+            <Input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+          </div>
+          <div>
+            <Label>Fecha de fin planificado (opcional)</Label>
+            <Input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+          </div>
+          <div>
+            <Label>Notas</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button onClick={submit} disabled={!canSave || save.isLoading}>Guardar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
