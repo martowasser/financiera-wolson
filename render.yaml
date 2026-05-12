@@ -20,8 +20,7 @@ services:
     region: oregon
     rootDir: .
     buildCommand: |
-      corepack enable
-      pnpm install --frozen-lockfile
+      pnpm install --frozen-lockfile --production=false
       pnpm --filter @financiero/api db:generate
       pnpm --filter @financiero/api build
     preDeployCommand: pnpm --filter @financiero/api db:migrate:deploy
