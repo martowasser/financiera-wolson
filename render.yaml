@@ -8,7 +8,7 @@ databases:
   - name: financiera-db
     databaseName: financiero
     user: financiero
-    plan: starter
+    plan: basic-256mb
     region: oregon
     postgresMajorVersion: "16"
 
