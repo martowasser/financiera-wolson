@@ -6,7 +6,7 @@ import { distribute } from '../../lib/distribute.js';
  * Plus caja global y cuentas corrientes.
  */
 export async function getPosicion() {
-  const [sociedades, cuentas, ultimaCajaCerrada, cajaHoy] = await Promise.all([
+  const [sociedades, cuentas, ownerCuentas, ultimaCajaCerrada, cajaHoy] = await Promise.all([
     prisma.sociedad.findMany({
       where: { deletedAt: null },
       orderBy: { name: 'asc' },
@@ -20,9 +20,16 @@ export async function getPosicion() {
       orderBy: { name: 'asc' },
       select: { id: true, name: true, identifier: true, saldoArs: true, saldoUsd: true },
     }),
+    prisma.cuenta.findMany({
+      where: { isOwner: true, deletedAt: null },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true },
+    }),
     prisma.cajaDia.findFirst({ where: { status: 'CLOSED' }, orderBy: { fecha: 'desc' } }),
     prisma.cajaDia.findFirst({ where: { status: 'OPEN' }, orderBy: { fecha: 'desc' } }),
   ]);
+
+  const ownerIds = new Set(ownerCuentas.map((o) => o.id));
 
   const cajaSaldoBaseArs = ultimaCajaCerrada?.saldoFinalArs ?? cajaHoy?.saldoInicialArs ?? 0n;
   const cajaSaldoBaseUsd = ultimaCajaCerrada?.saldoFinalUsd ?? cajaHoy?.saldoInicialUsd ?? 0n;
@@ -69,10 +76,36 @@ export async function getPosicion() {
     };
   });
 
+  let financieraTotalArs = 0n;
+  let financieraTotalUsd = 0n;
+  let ownerTotalArs = 0n;
+  let ownerTotalUsd = 0n;
+  for (const s of sociedadesOut) {
+    if (s.banco) {
+      financieraTotalArs += s.banco.saldoArs;
+      financieraTotalUsd += s.banco.saldoUsd;
+    }
+    for (const m of s.socios) {
+      if (ownerIds.has(m.cuentaId)) {
+        ownerTotalArs += m.correspondeArs;
+        ownerTotalUsd += m.correspondeUsd;
+      }
+    }
+  }
+
   return {
     sociedades: sociedadesOut,
     caja: { saldoArs: cajaSaldoArs, saldoUsd: cajaSaldoUsd },
     cuentas,
+    owner: ownerCuentas.length > 0
+      ? {
+          cuentaIds: ownerCuentas.map((o) => o.id),
+          names: ownerCuentas.map((o) => o.name),
+          totalArs: ownerTotalArs,
+          totalUsd: ownerTotalUsd,
+        }
+      : null,
+    financieraTotal: { saldoArs: financieraTotalArs, saldoUsd: financieraTotalUsd },
   };
 }
 

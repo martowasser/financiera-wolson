@@ -5,6 +5,7 @@ export const createCuentaSchema = z.object({
   name: z.string().min(1).max(200),
   identifier: nullishString.pipe(z.string().min(1).max(50).optional()),
   notes: nullishString,
+  isOwner: z.boolean().optional(),
 });
 
 export const updateCuentaSchema = z.object({
@@ -12,6 +13,7 @@ export const updateCuentaSchema = z.object({
   identifier: nullishString.pipe(z.string().min(1).max(50).optional()),
   notes: nullishString,
   isActive: z.boolean().optional(),
+  isOwner: z.boolean().optional(),
 });
 
 export const listCuentasQuerySchema = z.object({

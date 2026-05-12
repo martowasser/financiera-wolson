@@ -9,6 +9,7 @@ model Cuenta {
   saldoArs   BigInt    @default(0)
   saldoUsd   BigInt    @default(0)
   isActive   Boolean   @default(true)
+  isOwner    Boolean   @default(false)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?

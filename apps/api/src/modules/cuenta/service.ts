@@ -32,6 +32,7 @@ export async function createCuenta(input: CreateCuentaInput) {
       name: input.name,
       identifier: input.identifier ?? null,
       notes: input.notes ?? null,
+      isOwner: input.isOwner ?? false,
     },
   });
 }
@@ -47,6 +48,7 @@ export async function updateCuenta(id: string, input: UpdateCuentaInput) {
   if (input.identifier !== undefined) data.identifier = input.identifier ?? null;
   if (input.notes !== undefined) data.notes = input.notes ?? null;
   if (input.isActive !== undefined) data.isActive = input.isActive;
+  if (input.isOwner !== undefined) data.isOwner = input.isOwner;
   return prisma.cuenta.update({ where: { id }, data });
 }
 
