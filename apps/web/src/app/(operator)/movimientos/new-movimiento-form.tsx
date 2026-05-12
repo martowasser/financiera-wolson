@@ -167,6 +167,17 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
     && repartoSum === montoCentavos
   );
 
+  // La sociedadId es derivable cuando ya elegimos un banco (banco 1:1 sociedad)
+  // o una propiedad o un alquiler — backend lo deriva igual en service.ts.
+  // Si es derivable, no hace falta mostrar el selector de sociedad.
+  const sociedadDerivable = useMemo(() => {
+    if (origenBucket === 'BANCO' && origenBancoId) return true;
+    if (destinoBucket === 'BANCO' && destinoBancoId) return true;
+    if (propiedadId) return true;
+    if (alquilerId) return true;
+    return false;
+  }, [origenBucket, origenBancoId, destinoBucket, destinoBancoId, propiedadId, alquilerId]);
+
   const canSubmit = useMemo(() => {
     if (!rule) return false;
     if (cajaCheck === 'CLOSED') return false;
@@ -174,7 +185,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
     if (rule.requireNotes && !notes.trim()) return false;
     if (rule.requireAlquiler && !alquilerId) return false;
     if (rule.requirePropiedad && !propiedadId) return false;
-    if (rule.requireSociedad && !sociedadId) return false;
+    if (rule.requireSociedad && !sociedadId && !sociedadDerivable) return false;
     if (rule.flow === 'I') {
       if (!destinoBucket) return false;
       if (destinoBucket === 'BANCO' && !destinoBancoId) return false;
@@ -194,7 +205,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
     }
     if (!repartoValid) return false;
     return true;
-  }, [rule, cajaCheck, monto, notes, alquilerId, propiedadId, sociedadId, origenBucket, origenBancoId, origenCuentaId, destinoBucket, destinoBancoId, destinoCuentaId, repartoValid]);
+  }, [rule, cajaCheck, monto, notes, alquilerId, propiedadId, sociedadId, sociedadDerivable, origenBucket, origenBancoId, origenCuentaId, destinoBucket, destinoBancoId, destinoCuentaId, repartoValid]);
 
   async function submit() {
     if (!tipo || !rule) return;
@@ -400,7 +411,7 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
           </select>
         </div>
       )}
-      {rule!.requireSociedad && (
+      {rule!.requireSociedad && !sociedadDerivable && (
         <div>
           <Label>Sociedad</Label>
           <select value={sociedadId} onChange={(e) => setSociedadId(e.target.value)}
