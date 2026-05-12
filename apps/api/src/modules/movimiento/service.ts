@@ -557,7 +557,21 @@ export async function listMovimientos(opts: {
     if (opts.from) (where.fecha as Prisma.DateTimeFilter).gte = new Date(`${opts.from}T00:00:00.000Z`);
     if (opts.to)   (where.fecha as Prisma.DateTimeFilter).lte = new Date(`${opts.to}T00:00:00.000Z`);
   }
-  if (opts.tipo) where.tipo = opts.tipo;
+  if (opts.tipo) {
+    if (opts.cuentaId) {
+      // En páginas de cuenta, las filas REPARTO_SOCIO aparecen como movs de la
+      // cuenta — pero su tipo es REPARTO_SOCIO, no el del cobro original. Para
+      // que el filtro "ALQUILER_COBRO" matchee también esos derivados, comparamos
+      // contra el tipo del padre via la relación derivadoDe.
+      const existingAnd = Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : [];
+      where.AND = [
+        ...existingAnd,
+        { OR: [{ tipo: opts.tipo }, { derivadoDe: { tipo: opts.tipo } }] },
+      ];
+    } else {
+      where.tipo = opts.tipo;
+    }
+  }
   if (opts.moneda) where.moneda = opts.moneda;
   if (opts.alquilerId) where.alquilerId = opts.alquilerId;
   if (opts.propiedadId) where.propiedadId = opts.propiedadId;
