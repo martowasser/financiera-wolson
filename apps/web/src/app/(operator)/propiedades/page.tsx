@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -32,6 +33,7 @@ type Propiedad = {
   direccion: string;
   descripcion: string | null;
   isActive: boolean;
+  deletedAt: string | null;
   sociedad: { id: string; name: string };
   _count: { alquileres: number };
 };
@@ -43,14 +45,16 @@ export default function PropiedadesPage() {
   const [q, setQ] = useState('');
   const [sociedadId, setSociedadId] = useState('');
   const [includeInactive, setIncludeInactive] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const params = useMemo(() => {
     const p: Record<string, string | undefined> = {};
     if (q) p.q = q;
     if (sociedadId) p.sociedadId = sociedadId;
     if (!includeInactive) p.active = 'true';
+    if (showArchived) p.showArchived = 'true';
     return p;
-  }, [q, sociedadId, includeInactive]);
+  }, [q, sociedadId, includeInactive, showArchived]);
 
   const { data: propiedades, isLoading, refetch } = useQuery<Propiedad[]>('/propiedades', params);
   const { data: sociedades } = useQuery<Sociedad[]>('/sociedades');
@@ -93,6 +97,10 @@ export default function PropiedadesPage() {
         >
           {includeInactive ? 'Mostrando inactivas' : 'Solo activas'}
         </Button>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+          <Checkbox checked={showArchived} onCheckedChange={(v) => setShowArchived(v === true)} />
+          Mostrar archivadas
+        </label>
       </div>
 
       <div className="rounded-md border">
@@ -113,10 +121,13 @@ export default function PropiedadesPage() {
             {propiedades && propiedades.length === 0 && (
               <tr><td colSpan={5} className="px-3 py-4 text-muted-foreground">Sin propiedades.</td></tr>
             )}
-            {(propiedades ?? []).map((p) => (
-              <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
+            {(propiedades ?? []).map((p) => {
+              const archived = !!p.deletedAt;
+              return (
+              <tr key={p.id} className={`border-b last:border-0 hover:bg-muted/30 ${archived ? 'opacity-50' : ''}`}>
                 <td className="px-3 py-2">
                   <Link href={`/propiedades/${p.id}`} className="font-medium hover:underline">{p.nombre}</Link>
+                  {archived && <span className="ml-2 text-xs text-muted-foreground">(archivada)</span>}
                 </td>
                 <td className="px-3 py-2 text-muted-foreground">{p.direccion}</td>
                 <td className="px-3 py-2">{p.sociedad.name}</td>
@@ -127,7 +138,8 @@ export default function PropiedadesPage() {
                     : <Badge variant="secondary">Inactiva</Badge>}
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>

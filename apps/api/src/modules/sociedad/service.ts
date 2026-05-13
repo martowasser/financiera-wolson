@@ -32,11 +32,16 @@ function validateSocios(socios: SocioInput[]) {
 export async function listSociedades(opts: {
   q?: string;
   active?: 'true' | 'false';
+  showArchived?: 'true' | 'false';
   includeSocios?: 'true' | 'false';
   includeBanco?: 'true' | 'false';
   includePropiedades?: 'true' | 'false';
 }) {
-  const where: Prisma.SociedadWhereInput = { deletedAt: null };
+  const where: Prisma.SociedadWhereInput = {};
+  // Archived (deletedAt!=null) hidden by default; ?showArchived=true las incluye.
+  if (opts.showArchived !== 'true') {
+    where.deletedAt = null;
+  }
   // Active-only by default; ?active=false drops the filter so inactive sociedades are included too.
   if (opts.active !== 'false') {
     where.isActive = true;
@@ -170,13 +175,14 @@ export async function replaceSocios(id: string, input: ReplaceSociosInput) {
 
 export async function deleteSociedad(id: string) {
   await getSociedad(id);
-  const [activePropiedades, movimientosCount] = await Promise.all([
-    prisma.propiedad.count({ where: { sociedadId: id, deletedAt: null, isActive: true } }),
-    prisma.movimiento.count({ where: { sociedadId: id } }),
-  ]);
-  if (activePropiedades > 0 || movimientosCount > 0) {
+  // Soft-delete (archivar). Solo bloqueamos si hay dependencias ACTIVAS — los
+  // movimientos históricos se conservan vía las FKs nullable.
+  const activePropiedades = await prisma.propiedad.count({
+    where: { sociedadId: id, deletedAt: null, isActive: true },
+  });
+  if (activePropiedades > 0) {
     throw unprocessable(
-      'No se puede eliminar: la sociedad tiene propiedades activas o movimientos asociados',
+      'No se puede archivar: la sociedad tiene propiedades activas',
       'SOCIEDAD_HAS_DEPENDENCIES',
     );
   }

@@ -2,7 +2,9 @@
 
 import { use, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@/lib/hooks';
+import { apiFetch } from '@/lib/api';
 import { formatApiError } from '@/lib/api-errors';
 import { formatMoney, formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
@@ -13,6 +15,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Plus, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { label, alquilerStatusLabels } from '@/lib/labels';
@@ -37,11 +49,26 @@ type Alquiler = {
 };
 
 export default function AlquilerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
   const { id } = use(params);
   const { data: c, refetch } = useQuery<Alquiler>(`/alquileres/${id}`);
   const { data: cuentas } = useQuery<Cuenta[]>('/cuentas', { active: 'true' });
   const [finDialogOpen, setFinDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+
+  async function archive() {
+    setArchiving(true);
+    try {
+      await apiFetch(`/alquileres/${id}`, { method: 'DELETE' });
+      toast.success('Alquiler archivado');
+      router.push('/alquileres');
+    } catch (e) {
+      toast.error(formatApiError(e));
+      setArchiving(false);
+    }
+  }
 
   if (!c) return <div className="text-muted-foreground">Cargando…</div>;
 
@@ -92,15 +119,34 @@ export default function AlquilerDetailPage({ params }: { params: Promise<{ id: s
 
       <SociosSection alquiler={c} cuentas={cuentas ?? []} onChange={refetch} />
 
-      {c.status === 'ACTIVO' && (
-        <div>
+      <div className="flex flex-wrap gap-2">
+        {c.status === 'ACTIVO' && (
           <Button variant="outline" onClick={() => setFinDialogOpen(true)}>Finalizar alquiler</Button>
-        </div>
-      )}
+        )}
+        <Button variant="destructive" onClick={() => setArchiveOpen(true)}>Archivar</Button>
+      </div>
 
       <FinalizarDialog alquilerId={c.id} open={finDialogOpen} onClose={() => setFinDialogOpen(false)} onSaved={() => { setFinDialogOpen(false); refetch(); }} />
 
       <EditarDialog alquiler={c} open={editDialogOpen} onClose={() => setEditDialogOpen(false)} onSaved={() => { setEditDialogOpen(false); refetch(); }} />
+
+      <AlertDialog open={archiveOpen} onOpenChange={setArchiveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archivar alquiler</AlertDialogTitle>
+            <AlertDialogDescription>
+              Va a dejar de aparecer en los listados y en los pickers. La
+              historia que lo referencia se conserva.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={archiving}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={archive} disabled={archiving}>
+              {archiving ? 'Archivando…' : 'Archivar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <MovimientosPanel
         scope={{ alquilerId: c.id }}

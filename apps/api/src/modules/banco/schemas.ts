@@ -18,6 +18,7 @@ export const listBancosQuerySchema = z.object({
   sociedadId: z.string().optional(),
   q: z.string().optional(),
   active: z.enum(['true', 'false']).optional(),
+  showArchived: z.enum(['true', 'false']).optional(),
 });
 
 export type CreateBancoInput = z.infer<typeof createBancoSchema>;

@@ -3,8 +3,9 @@ import { conflict, notFound, unprocessable } from '../../lib/errors.js';
 import type { CreateCuentaInput, UpdateCuentaInput } from './schemas.js';
 import type { Prisma } from '@prisma/client';
 
-export async function listCuentas(opts: { q?: string; active?: 'true' | 'false' }) {
-  const where: Prisma.CuentaWhereInput = { deletedAt: null };
+export async function listCuentas(opts: { q?: string; active?: 'true' | 'false'; showArchived?: 'true' | 'false' }) {
+  const where: Prisma.CuentaWhereInput = {};
+  if (opts.showArchived !== 'true') where.deletedAt = null;
   if (opts.active === 'true') where.isActive = true;
   if (opts.active === 'false') where.isActive = false;
   if (opts.q) {
@@ -54,15 +55,23 @@ export async function updateCuenta(id: string, input: UpdateCuentaInput) {
 
 export async function deleteCuenta(id: string) {
   await getCuenta(id);
-  // Block soft-delete if any active membership references this cuenta.
-  const [sociedadMemberships, alquilerMemberships, alquileresInquilino] = await Promise.all([
-    prisma.sociedadSocio.count({ where: { cuentaId: id } }),
-    prisma.alquilerSocio.count({ where: { cuentaId: id } }),
-    prisma.alquiler.count({ where: { inquilinoId: id, deletedAt: null } }),
+  // Soft-delete (archivar). Bloqueamos solo si la cuenta participa en
+  // entidades activas no archivadas: sociedades vivas (socio), alquileres
+  // vivos (socio o inquilino). Los movimientos históricos no bloquean.
+  const [sociedadMemberships, alquilerSocios, alquileresInquilino] = await Promise.all([
+    prisma.sociedadSocio.count({
+      where: { cuentaId: id, sociedad: { deletedAt: null, isActive: true } },
+    }),
+    prisma.alquilerSocio.count({
+      where: { cuentaId: id, alquiler: { deletedAt: null, status: 'ACTIVO' } },
+    }),
+    prisma.alquiler.count({
+      where: { inquilinoId: id, deletedAt: null, status: 'ACTIVO' },
+    }),
   ]);
-  if (sociedadMemberships > 0 || alquilerMemberships > 0 || alquileresInquilino > 0) {
+  if (sociedadMemberships > 0 || alquilerSocios > 0 || alquileresInquilino > 0) {
     throw unprocessable(
-      'No se puede eliminar: la cuenta participa de sociedades, alquileres o como inquilino activo',
+      'No se puede archivar: la cuenta participa en sociedades o alquileres activos',
       'CUENTA_HAS_DEPENDENCIES',
     );
   }

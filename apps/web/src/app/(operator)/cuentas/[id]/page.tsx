@@ -1,15 +1,18 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import { useQuery, useMutation } from '@/lib/hooks';
 import { formatMoney } from '@/lib/format';
 import { formatApiError } from '@/lib/api-errors';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Pencil } from 'lucide-react';
 import { MovimientosPanel } from '@/components/movimientos-panel';
+import { EntityEditDialog } from '@/components/entity-edit-dialog';
 import { toast } from 'sonner';
 
 type Cuenta = {
@@ -28,6 +31,7 @@ export default function CuentaDetailPage({ params }: { params: Promise<{ id: str
   const { id } = use(params);
   const { data: cuenta, refetch } = useQuery<Cuenta>(`/cuentas/${id}`);
   const { mutate: updateCuenta, isLoading: savingOwner } = useMutation<{ isOwner: boolean }, Cuenta>(`/cuentas/${id}`, 'PUT');
+  const [editOpen, setEditOpen] = useState(false);
 
   async function toggleOwner(next: boolean) {
     try {
@@ -52,8 +56,21 @@ export default function CuentaDetailPage({ params }: { params: Promise<{ id: str
             {cuenta.isActive
               ? <Badge variant="outline">Activa</Badge>
               : <Badge variant="secondary">Inactiva</Badge>}
+            <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4" /> Editar
+            </Button>
           </div>
         }
+      />
+
+      <EntityEditDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        endpoint={`/cuentas/${id}`}
+        current={{ name: cuenta.name, notes: cuenta.notes }}
+        entityLabel="cuenta"
+        onSaved={refetch}
+        archiveRedirectTo="/cuentas"
       />
 
       <Card>

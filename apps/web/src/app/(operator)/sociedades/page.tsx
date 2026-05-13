@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -32,6 +33,7 @@ type Sociedad = {
   name: string;
   notes: string | null;
   isActive: boolean;
+  deletedAt: string | null;
   banco: {
     id: string;
     nombre: string;
@@ -50,6 +52,7 @@ export default function SociedadesPage() {
   const searchParams = useSearchParams();
   const newOpen = searchParams.get('new') === '1';
   const [q, setQ] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
   const params = useMemo(() => {
     const p: Record<string, string> = {
@@ -58,8 +61,12 @@ export default function SociedadesPage() {
       includePropiedades: 'true',
     };
     if (q) p.q = q;
+    if (showArchived) {
+      p.showArchived = 'true';
+      p.active = 'false';
+    }
     return p;
-  }, [q]);
+  }, [q, showArchived]);
 
   const { data: sociedades, isLoading, refetch } = useQuery<Sociedad[]>('/sociedades', params);
 
@@ -77,13 +84,17 @@ export default function SociedadesPage() {
         }
       />
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-3">
         <Input
           placeholder="Buscar por nombre..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
           className="max-w-sm"
         />
+        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+          <Checkbox checked={showArchived} onCheckedChange={(v) => setShowArchived(v === true)} />
+          Mostrar archivadas
+        </label>
       </div>
 
       <div className="rounded-md border">
@@ -107,10 +118,12 @@ export default function SociedadesPage() {
             )}
             {(sociedades ?? []).map((s) => {
               const propCount = s._count?.propiedades ?? s.propiedades?.length ?? 0;
+              const archived = !!s.deletedAt;
               return (
-                <tr key={s.id} className="border-b last:border-0 hover:bg-muted/30">
+                <tr key={s.id} className={`border-b last:border-0 hover:bg-muted/30 ${archived ? 'opacity-50' : ''}`}>
                   <td className="px-3 py-2">
                     <Link href={`/sociedades/${s.id}`} className="font-medium hover:underline">{s.name}</Link>
+                    {archived && <span className="ml-2 text-xs text-muted-foreground">(archivada)</span>}
                   </td>
                   <td className="px-3 py-2 text-center">{s.socios?.length ?? 0}</td>
                   <td className="px-3 py-2">

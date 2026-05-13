@@ -11,9 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MovimientosPanel } from '@/components/movimientos-panel';
+import { EntityEditDialog } from '@/components/entity-edit-dialog';
 
 type Cuenta = { id: string; name: string; identifier: string | null };
 
@@ -31,6 +32,7 @@ export default function SociedadDetailPage({ params }: { params: Promise<{ id: s
   const { id } = use(params);
   const { data: sociedad, refetch } = useQuery<Sociedad>(`/sociedades/${id}`);
   const { data: cuentas } = useQuery<Cuenta[]>('/cuentas', { active: 'true' });
+  const [editOpen, setEditOpen] = useState(false);
 
   if (!sociedad) return <div className="text-muted-foreground">Cargando…</div>;
 
@@ -40,10 +42,25 @@ export default function SociedadDetailPage({ params }: { params: Promise<{ id: s
         title={sociedad.name}
         description={sociedad.notes ?? undefined}
         actions={
-          sociedad.isActive
-            ? <Badge variant="outline">Activa</Badge>
-            : <Badge variant="secondary">Inactiva</Badge>
+          <div className="flex items-center gap-2">
+            {sociedad.isActive
+              ? <Badge variant="outline">Activa</Badge>
+              : <Badge variant="secondary">Inactiva</Badge>}
+            <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4" /> Editar
+            </Button>
+          </div>
         }
+      />
+
+      <EntityEditDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        endpoint={`/sociedades/${id}`}
+        current={{ name: sociedad.name, notes: sociedad.notes }}
+        entityLabel="sociedad"
+        onSaved={refetch}
+        archiveRedirectTo="/sociedades"
       />
 
       <BancoSection sociedad={sociedad} onChange={refetch} />

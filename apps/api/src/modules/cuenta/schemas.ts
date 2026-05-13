@@ -19,6 +19,7 @@ export const updateCuentaSchema = z.object({
 export const listCuentasQuerySchema = z.object({
   q: z.string().optional(),
   active: z.enum(['true', 'false']).optional(),
+  showArchived: z.enum(['true', 'false']).optional(),
 });
 
 export type CreateCuentaInput = z.infer<typeof createCuentaSchema>;

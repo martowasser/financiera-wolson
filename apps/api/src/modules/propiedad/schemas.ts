@@ -21,6 +21,7 @@ export const listPropiedadesQuerySchema = z.object({
   sociedadId: z.string().optional(),
   q: z.string().optional(),
   active: z.enum(['true', 'false']).optional(),
+  showArchived: z.enum(['true', 'false']).optional(),
 });
 
 export type CreatePropiedadInput = z.infer<typeof createPropiedadSchema>;

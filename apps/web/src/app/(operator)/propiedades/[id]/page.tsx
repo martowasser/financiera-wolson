@@ -1,14 +1,17 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@/lib/hooks';
 import { formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Pencil } from 'lucide-react';
 import { label, alquilerStatusLabels } from '@/lib/labels';
 import { MovimientosPanel } from '@/components/movimientos-panel';
+import { EntityEditDialog } from '@/components/entity-edit-dialog';
 
 type Propiedad = {
   id: string;
@@ -31,7 +34,8 @@ type Propiedad = {
 
 export default function PropiedadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data: p } = useQuery<Propiedad>(`/propiedades/${id}`);
+  const { data: p, refetch } = useQuery<Propiedad>(`/propiedades/${id}`);
+  const [editOpen, setEditOpen] = useState(false);
 
   if (!p) return <div className="text-muted-foreground">Cargando…</div>;
 
@@ -40,7 +44,25 @@ export default function PropiedadDetailPage({ params }: { params: Promise<{ id: 
       <PageHeader
         title={p.nombre}
         description={p.direccion}
-        actions={p.isActive ? <Badge variant="outline">Activa</Badge> : <Badge variant="secondary">Inactiva</Badge>}
+        actions={
+          <div className="flex items-center gap-2">
+            {p.isActive ? <Badge variant="outline">Activa</Badge> : <Badge variant="secondary">Inactiva</Badge>}
+            <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4" /> Editar
+            </Button>
+          </div>
+        }
+      />
+
+      <EntityEditDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        endpoint={`/propiedades/${id}`}
+        current={{ nombre: p.nombre, notes: p.notes }}
+        entityLabel="propiedad"
+        config={{ nameKey: 'nombre' }}
+        onSaved={refetch}
+        archiveRedirectTo="/propiedades"
       />
 
       <Card>

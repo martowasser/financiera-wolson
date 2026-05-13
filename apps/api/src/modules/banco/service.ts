@@ -5,8 +5,9 @@ import type { Prisma } from '@prisma/client';
 
 const sociedadSelect = { sociedad: { select: { id: true, name: true } } } as const;
 
-export async function listBancos(opts: { sociedadId?: string; q?: string; active?: 'true' | 'false' }) {
-  const where: Prisma.BancoWhereInput = { deletedAt: null };
+export async function listBancos(opts: { sociedadId?: string; q?: string; active?: 'true' | 'false'; showArchived?: 'true' | 'false' }) {
+  const where: Prisma.BancoWhereInput = {};
+  if (opts.showArchived !== 'true') where.deletedAt = null;
   if (opts.sociedadId) where.sociedadId = opts.sociedadId;
   if (opts.active === 'true') where.isActive = true;
   if (opts.active === 'false') where.isActive = false;
@@ -77,6 +78,17 @@ export async function reabrirBanco(id: string) {
   return prisma.banco.update({
     where: { id },
     data: { isActive: true },
+    include: sociedadSelect,
+  });
+}
+
+export async function deleteBanco(id: string) {
+  await getBanco(id);
+  // Soft-delete (archivar). Los movimientos históricos no bloquean — quedan
+  // apuntando al banco archivado vía FK nullable.
+  return prisma.banco.update({
+    where: { id },
+    data: { deletedAt: new Date(), isActive: false },
     include: sociedadSelect,
   });
 }

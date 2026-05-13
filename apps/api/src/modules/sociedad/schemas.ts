@@ -25,6 +25,7 @@ export const replaceSociosSchema = z.object({
 export const listSociedadesQuerySchema = z.object({
   q: z.string().optional(),
   active: z.enum(['true', 'false']).optional(),
+  showArchived: z.enum(['true', 'false']).optional(),
   includeSocios: z.enum(['true', 'false']).optional(),
   includeBanco: z.enum(['true', 'false']).optional(),
   includePropiedades: z.enum(['true', 'false']).optional(),

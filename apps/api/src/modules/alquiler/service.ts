@@ -45,7 +45,8 @@ async function assertCuentasActive(socios: SocioInput[]) {
 }
 
 export async function listAlquileres(opts: ListAlquileresQuery) {
-  const where: Prisma.AlquilerWhereInput = { deletedAt: null };
+  const where: Prisma.AlquilerWhereInput = {};
+  if (opts.showArchived !== 'true') where.deletedAt = null;
   if (opts.status) where.status = opts.status;
   if (opts.propiedadId) where.propiedadId = opts.propiedadId;
   if (opts.inquilinoId) where.inquilinoId = opts.inquilinoId;
@@ -252,14 +253,8 @@ export async function reactivarAlquiler(id: string) {
 
 export async function deleteAlquiler(id: string) {
   await getAlquiler(id);
-  // Preserve movement history: if any movimiento references this alquiler we refuse to soft-delete.
-  const movimientos = await prisma.movimiento.count({ where: { alquilerId: id } });
-  if (movimientos > 0) {
-    throw unprocessable(
-      'No se puede eliminar: el alquiler tiene movimientos asociados',
-      'ALQUILER_HAS_MOVIMIENTOS',
-    );
-  }
+  // Soft-delete (archivar). No bloqueamos por movimientos históricos —
+  // se preservan vía la FK alquilerId nullable en Movimiento.
   return prisma.alquiler.update({
     where: { id },
     data: { deletedAt: new Date() },

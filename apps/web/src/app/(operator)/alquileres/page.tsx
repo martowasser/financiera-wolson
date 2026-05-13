@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { label, alquilerStatusLabels } from '@/lib/labels';
@@ -28,6 +29,7 @@ type Alquiler = {
   fechaInicio: string;
   fechaFin: string | null;
   finalizadoEn: string | null;
+  deletedAt: string | null;
   propiedad: { id: string; nombre: string; direccion: string; sociedad: { name: string } };
   inquilino: { id: string; name: string };
 };
@@ -41,13 +43,15 @@ export default function AlquileresPage() {
   const newOpen = searchParams.get('new') === '1';
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<'' | 'ACTIVO' | 'FINALIZADO'>('ACTIVO');
+  const [showArchived, setShowArchived] = useState(false);
 
   const params = useMemo(() => {
     const p: Record<string, string | undefined> = {};
     if (q) p.q = q;
     if (status) p.status = status;
+    if (showArchived) p.showArchived = 'true';
     return p;
-  }, [q, status]);
+  }, [q, status, showArchived]);
 
   const { data: alquileres, isLoading, refetch } = useQuery<Alquiler[]>('/alquileres', params);
 
@@ -81,6 +85,10 @@ export default function AlquileresPage() {
           <option value="ACTIVO">Activos</option>
           <option value="FINALIZADO">Finalizados</option>
         </select>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+          <Checkbox checked={showArchived} onCheckedChange={(v) => setShowArchived(v === true)} />
+          Mostrar archivados
+        </label>
       </div>
 
       <div className="rounded-md border">
@@ -101,10 +109,13 @@ export default function AlquileresPage() {
             {alquileres && alquileres.length === 0 && (
               <tr><td colSpan={7} className="px-3 py-4 text-muted-foreground">Sin alquileres.</td></tr>
             )}
-            {(alquileres ?? []).map((c) => (
-              <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30">
+            {(alquileres ?? []).map((c) => {
+              const archived = !!c.deletedAt;
+              return (
+              <tr key={c.id} className={`border-b last:border-0 hover:bg-muted/30 ${archived ? 'opacity-50' : ''}`}>
                 <td className="px-3 py-2">
                   <Link href={`/alquileres/${c.id}`} className="font-mono text-xs hover:underline">#{c.numero}</Link>
+                  {archived && <span className="ml-2 text-xs text-muted-foreground">(arch.)</span>}
                 </td>
                 <td className="px-3 py-2">
                   <div className="font-medium">{c.propiedad.nombre}</div>
@@ -124,7 +135,8 @@ export default function AlquileresPage() {
                     : <span className="text-muted-foreground">—</span>}
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>

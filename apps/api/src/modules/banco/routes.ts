@@ -39,6 +39,11 @@ export default async function bancoRoutes(fastify: FastifyInstance) {
     return service.reabrirBanco(id);
   });
 
+  fastify.delete('/:id', async (request) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    return service.deleteBanco(id);
+  });
+
   fastify.post(
     '/:id/recalcular-saldo',
     { preHandler: requireRole('ADMIN') },

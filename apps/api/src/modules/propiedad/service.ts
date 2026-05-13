@@ -8,7 +8,8 @@ import type {
 import type { Prisma } from '@prisma/client';
 
 export async function listPropiedades(opts: ListPropiedadesQuery) {
-  const where: Prisma.PropiedadWhereInput = { deletedAt: null };
+  const where: Prisma.PropiedadWhereInput = {};
+  if (opts.showArchived !== 'true') where.deletedAt = null;
   if (opts.sociedadId) where.sociedadId = opts.sociedadId;
   if (opts.active === 'true') where.isActive = true;
   if (opts.active === 'false') where.isActive = false;
@@ -85,15 +86,14 @@ export async function updatePropiedad(id: string, input: UpdatePropiedadInput) {
 export async function deletePropiedad(id: string) {
   const existing = await prisma.propiedad.findUnique({ where: { id } });
   if (!existing || existing.deletedAt) throw notFound('Propiedad no encontrada');
-  // Block soft-delete while active alquileres or any historic movimientos reference this propiedad,
-  // so ABL/expensas history and current rentals stay intact.
-  const [activeAlquileres, movimientos] = await Promise.all([
-    prisma.alquiler.count({ where: { propiedadId: id, status: 'ACTIVO', deletedAt: null } }),
-    prisma.movimiento.count({ where: { propiedadId: id } }),
-  ]);
-  if (activeAlquileres > 0 || movimientos > 0) {
+  // Soft-delete (archivar): solo bloqueamos por alquileres activos. Los
+  // movimientos históricos se preservan vía FK.
+  const activeAlquileres = await prisma.alquiler.count({
+    where: { propiedadId: id, status: 'ACTIVO', deletedAt: null },
+  });
+  if (activeAlquileres > 0) {
     throw unprocessable(
-      'No se puede eliminar: la propiedad tiene alquileres activos o movimientos asociados',
+      'No se puede archivar: la propiedad tiene alquileres activos',
       'PROPIEDAD_HAS_DEPENDENCIES',
     );
   }

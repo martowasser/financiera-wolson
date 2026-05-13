@@ -46,6 +46,7 @@ export const listAlquileresQuerySchema = z.object({
   inquilinoId: z.string().optional(),
   sociedadId: z.string().optional(),
   q: z.string().optional(),
+  showArchived: z.enum(['true', 'false']).optional(),
 });
 
 export const numeroParamSchema = z.object({
