@@ -108,6 +108,7 @@ export default function CajaHistoricoPage({ params }: { params: Promise<{ fecha:
         scope={{ fecha }}
         filenameHint={`caja-${fecha}`}
         hideFilters={['from', 'to']}
+        extracto={{ kind: 'caja', label: `caja-${fecha}` }}
         onRowClick={(m) => router.push(`/movimientos?id=${m.id}`)}
       />
     </div>

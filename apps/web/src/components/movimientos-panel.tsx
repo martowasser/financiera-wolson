@@ -47,11 +47,24 @@ export type Scope = {
   fecha?: string;
 };
 
+export type ExtractoTarget = {
+  // En qué entidad está scoped el panel. Cambia el CSV a formato extracto con
+  // DEBE/HABER/SALDO. La detección de DEBE/HABER se basa en si la entidad
+  // aparece en origen (DEBE = sale plata) o destino (HABER = entra plata).
+  kind: 'cuenta' | 'banco' | 'caja';
+  // Para cuenta y banco: id de la entidad. Para caja: no aplica (es bucket).
+  entityId?: string;
+  // Etiqueta usada en el nombre del archivo. Ej: "Banco Galicia" o "2026-05".
+  label: string;
+};
+
 type Props = {
   scope?: Scope;
   defaultLimit?: number;
   filenameHint?: string;
   hideFilters?: FilterKey[];
+  // Si está seteado, el CSV se exporta en formato extracto (DEBE/HABER/SALDO).
+  extracto?: ExtractoTarget;
   onRowClick?: (mov: PanelMov) => void;
 };
 
@@ -60,6 +73,7 @@ export function MovimientosPanel({
   defaultLimit = 200,
   filenameHint,
   hideFilters = [],
+  extracto,
   onRowClick,
 }: Props) {
   const router = useRouter();
@@ -118,12 +132,12 @@ export function MovimientosPanel({
     setDownloading(true);
     try {
       const all = await apiFetch<PanelMov[]>('/movimientos', { params: { ...filters, ...scope, limit: 5000 } });
-      const csv = movsToCsv(all);
+      const csv = extracto ? movsToExtractoCsv(all, extracto) : movsToCsv(all);
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = csvFilename(filenameHint);
+      a.download = extracto ? extractoFilename(extracto.label) : csvFilename(filenameHint);
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -261,4 +275,72 @@ function csvFilename(hint?: string): string {
   const today = new Date().toISOString().slice(0, 10);
   const tag = sanitize(hint);
   return tag ? `movimientos-${tag}-${today}.csv` : `movimientos-${today}.csv`;
+}
+
+function extractoFilename(label: string): string {
+  const today = new Date().toISOString().slice(0, 10);
+  const tag = sanitize(label) || 'cuenta';
+  return `extracto-${tag}-${today}.csv`;
+}
+
+// ---- Extracto CSV ----
+
+// Lado del movimiento en el que está la entidad: DEBE (sale plata) o HABER
+// (entra). Devuelve null si la entidad no aparece en ninguno (no debería
+// pasar — el filtro server-side ya excluye estos casos).
+export function extractoSide(m: PanelMov, target: ExtractoTarget): 'DEBE' | 'HABER' | null {
+  if (target.kind === 'caja') {
+    if (m.origenBucket === 'CAJA') return 'DEBE';
+    if (m.destinoBucket === 'CAJA') return 'HABER';
+    return null;
+  }
+  if (target.kind === 'banco' && target.entityId) {
+    if (m.bancoOrigen?.id === target.entityId)  return 'DEBE';
+    if (m.bancoDestino?.id === target.entityId) return 'HABER';
+    return null;
+  }
+  if (target.kind === 'cuenta' && target.entityId) {
+    if (m.cuentaOrigen?.id === target.entityId)  return 'DEBE';
+    if (m.cuentaDestino?.id === target.entityId) return 'HABER';
+    return null;
+  }
+  return null;
+}
+
+export function movsToExtractoCsv(movs: PanelMov[], target: ExtractoTarget): string {
+  const headers = ['Numero', 'Fecha', 'Tipo', 'Comprobante', 'Notas', 'DEBE', 'HABER', 'SALDO', 'Moneda'];
+  // Ordenamos ascendente (fecha, numero) para acumular saldos de menor a mayor.
+  const sorted = [...movs].sort((a, b) => {
+    const fa = a.fecha.slice(0, 10);
+    const fb = b.fecha.slice(0, 10);
+    if (fa !== fb) return fa < fb ? -1 : 1;
+    return a.numero - b.numero;
+  });
+  // Saldo acumulado por moneda. Cada fila acumula sobre su propia moneda y
+  // la columna SALDO refleja el saldo de esa moneda al momento del mov.
+  const acc: Record<string, number> = { ARS: 0, USD: 0 };
+  const rows: string[] = [];
+  for (const m of sorted) {
+    const side = extractoSide(m, target);
+    if (!side) continue; // skip movs que no impactan en la entidad scope.
+    const cents = Number(m.monto);
+    const monto = cents / 100;
+    if (side === 'DEBE')  acc[m.moneda] = (acc[m.moneda] ?? 0) - monto;
+    if (side === 'HABER') acc[m.moneda] = (acc[m.moneda] ?? 0) + monto;
+    const debe  = side === 'DEBE'  ? monto.toFixed(2) : '';
+    const haber = side === 'HABER' ? monto.toFixed(2) : '';
+    const saldo = (acc[m.moneda] ?? 0).toFixed(2);
+    rows.push([
+      `#${m.numero}`,
+      m.fecha.slice(0, 10),
+      label(movimientoTipoLabels, m.tipo),
+      m.comprobante ?? '',
+      m.notes ?? '',
+      debe,
+      haber,
+      saldo,
+      m.moneda,
+    ].map(csvCell).join(','));
+  }
+  return [headers.join(','), ...rows].join('\r\n');
 }

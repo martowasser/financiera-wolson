@@ -103,6 +103,7 @@ export default function CuentaDetailPage({ params }: { params: Promise<{ id: str
       <MovimientosPanel
         scope={{ cuentaId: id }}
         filenameHint={`cuenta-${cuenta.identifier ?? cuenta.name}`}
+        extracto={{ kind: 'cuenta', entityId: id, label: cuenta.name }}
       />
     </div>
   );
