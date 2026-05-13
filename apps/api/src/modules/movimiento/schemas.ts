@@ -61,10 +61,36 @@ export const createMovimientoSchema = z.object({
   repartoSocios: z.array(repartoEntrySchema).optional(),
 });
 
+// Editar un movimiento: todos los campos opcionales. Si solo vienen los
+// "informativos" (notes/comprobante/facturado), no se recalcula saldos. Si
+// viene cualquier campo estructural, se revierte el delta + reparto del
+// original y se recrean con los nuevos valores. Los `*Id` nullable aceptan
+// `null` explícito para limpiar el valor.
+const nullableString = z.string().min(1).nullable().optional();
 export const updateMovimientoSchema = z.object({
-  notes: nullishString,
+  fecha: isoDate.optional(),
+  tipo: movimientoTipoEnum.optional(),
+  monto: positiveBigintString.optional(),
+  moneda: monedaEnum.optional(),
+
+  origenBucket: bucketEnum.nullable().optional(),
+  origenBancoId: nullableString,
+  origenCuentaId: nullableString,
+
+  destinoBucket: bucketEnum.nullable().optional(),
+  destinoBancoId: nullableString,
+  destinoCuentaId: nullableString,
+
+  sociedadId: nullableString,
+  propiedadId: nullableString,
+  alquilerId: nullableString,
+  cuentaContraparteId: nullableString,
+
   comprobante: nullishString,
   facturado: z.boolean().optional(),
+  notes: nullishString,
+
+  repartoSocios: z.array(repartoEntrySchema).optional(),
 });
 
 export const reversarSchema = z.object({

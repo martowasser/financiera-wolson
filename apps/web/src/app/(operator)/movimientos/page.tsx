@@ -16,13 +16,31 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Plus } from 'lucide-react';
+import { ArrowRight, Pencil, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { label, movimientoTipoLabels } from '@/lib/labels';
-import { NewMovimientoForm } from './new-movimiento-form';
+import { NewMovimientoForm, type EditInitialValues } from './new-movimiento-form';
 import { MovimientosPanel, legibleSide, type PanelMov } from '@/components/movimientos-panel';
 
 type Mov = PanelMov;
+
+// Forma cruda devuelta por GET /movimientos/:id. Incluye los FKs escalares
+// y los IDs internos (origenBancoId, destinoCuentaId, etc.) que necesita el
+// form de edición.
+type DetailMov = Mov & {
+  createdAt: string;
+  createdBy: { name: string };
+  reversoDeId: string | null;
+  derivadoDeId: string | null;
+  origenBancoId: string | null;
+  origenCuentaId: string | null;
+  destinoBancoId: string | null;
+  destinoCuentaId: string | null;
+  sociedadId: string | null;
+  propiedadId: string | null;
+  alquilerId: string | null;
+  cuentaContraparteId: string | null;
+};
 
 export default function MovimientosPage() {
   const router = useRouter();
@@ -33,7 +51,7 @@ export default function MovimientosPage() {
   // Refresh tick para forzar refetch del panel después de crear/reversar un mov.
   const [refreshTick, setRefreshTick] = useState(0);
 
-  const { data: selected, refetch: refetchSelected } = useQuery<Mov & { createdAt: string; createdBy: { name: string }; reversoDeId: string | null }>(
+  const { data: selected, refetch: refetchSelected } = useQuery<DetailMov>(
     selectedId ? `/movimientos/${selectedId}` : null,
   );
 
@@ -98,7 +116,7 @@ export default function MovimientosPage() {
 }
 
 function DetailView({ mov, onChange }: {
-  mov: Mov & { createdAt: string; createdBy: { name: string }; reversoDeId: string | null };
+  mov: DetailMov;
   onChange: () => void;
 }) {
   const [notes, setNotes] = useState(mov.notes ?? '');
@@ -106,6 +124,33 @@ function DetailView({ mov, onChange }: {
   const [facturado, setFacturado] = useState(mov.facturado);
   const [savingEdit, setSavingEdit] = useState(false);
   const [reversarOpen, setReversarOpen] = useState(false);
+  const [editFullOpen, setEditFullOpen] = useState(false);
+
+  // Edición completa solo permitida si no es derivado, ni reverso, ni
+  // movimiento ya reversado (chequeado server-side; UI esconde el botón
+  // para coincidir).
+  const editable = !mov.derivadoDeId && mov.tipo !== 'REPARTO_SOCIO' && !mov.reversoDeId;
+
+  const initialValues: EditInitialValues = {
+    id: mov.id,
+    tipo: mov.tipo,
+    fecha: mov.fecha,
+    monto: mov.monto,
+    moneda: mov.moneda as 'ARS' | 'USD',
+    origenBucket:  (mov.origenBucket  as 'CAJA' | 'BANCO' | 'CUENTA_CORRIENTE' | null) ?? null,
+    origenBancoId:  mov.origenBancoId,
+    origenCuentaId: mov.origenCuentaId,
+    destinoBucket: (mov.destinoBucket as 'CAJA' | 'BANCO' | 'CUENTA_CORRIENTE' | null) ?? null,
+    destinoBancoId:  mov.destinoBancoId,
+    destinoCuentaId: mov.destinoCuentaId,
+    sociedadId: mov.sociedadId,
+    propiedadId: mov.propiedadId,
+    alquilerId: mov.alquilerId,
+    cuentaContraparteId: mov.cuentaContraparteId,
+    comprobante: mov.comprobante,
+    facturado: mov.facturado,
+    notes: mov.notes,
+  };
 
   const dirty = (notes.trim() || '') !== (mov.notes ?? '')
     || (comprobante.trim() || '') !== (mov.comprobante ?? '')
@@ -190,11 +235,16 @@ function DetailView({ mov, onChange }: {
         </div>
       </details>
 
-      {!mov.reversoDeId && (
-        <div className="pt-1">
+      <div className="flex flex-wrap gap-2 pt-1">
+        {editable && (
+          <Button variant="outline" size="sm" onClick={() => setEditFullOpen(true)}>
+            <Pencil className="h-4 w-4" /> Editar movimiento
+          </Button>
+        )}
+        {!mov.reversoDeId && (
           <Button variant="outline" size="sm" onClick={() => setReversarOpen(true)}>Reversar movimiento</Button>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="border-t pt-3 text-xs text-muted-foreground">
         Creado {formatDateTime(mov.createdAt)} por {mov.createdBy.name}.
@@ -207,6 +257,24 @@ function DetailView({ mov, onChange }: {
         onClose={() => setReversarOpen(false)}
         onSaved={() => { setReversarOpen(false); onChange(); }}
       />
+
+      <Dialog open={editFullOpen} onOpenChange={setEditFullOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Editar movimiento #{mov.numero}</DialogTitle></DialogHeader>
+          {editFullOpen && (
+            <>
+              <div className="rounded-md border border-yellow-400 bg-yellow-50 px-3 py-2 text-xs text-yellow-900">
+                Editar este movimiento recalculará el reparto a socios y los saldos. La acción se aplica al instante.
+              </div>
+              <NewMovimientoForm
+                initialValues={initialValues}
+                onCancel={() => setEditFullOpen(false)}
+                onSaved={() => { setEditFullOpen(false); onChange(); }}
+              />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

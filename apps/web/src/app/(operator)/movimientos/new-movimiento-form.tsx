@@ -56,25 +56,58 @@ type Alquiler = { id: string; numero: number; propiedad: { nombre: string }; inq
 
 type RepartoRow = { cuentaId: string; monto: string };
 
-export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: number) => void; onCancel: () => void }) {
-  const [tipo, setTipo] = useState<string | null>(null);
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
-  const [monto, setMonto] = useState('');
-  const [moneda, setMoneda] = useState<Moneda>('ARS');
-  const [origenBucket, setOrigenBucket] = useState<Bucket | ''>('');
-  const [origenBancoId, setOrigenBancoId] = useState('');
-  const [origenCuentaId, setOrigenCuentaId] = useState('');
-  const [destinoBucket, setDestinoBucket] = useState<Bucket | ''>('');
-  const [destinoBancoId, setDestinoBancoId] = useState('');
-  const [destinoCuentaId, setDestinoCuentaId] = useState('');
-  const [sociedadId, setSociedadId] = useState('');
-  const [propiedadId, setPropiedadId] = useState('');
-  const [alquilerId, setAlquilerId] = useState('');
-  const [cuentaContraparteId, setCuentaContraparteId] = useState('');
+// Valores iniciales para modo edit. Provienen del mov ya cargado en el server.
+// Los IDs (bancoId/cuentaId/etc) se envían tal cual; el form los hidrata.
+export type EditInitialValues = {
+  id: string;
+  tipo: string;
+  fecha: string;
+  monto: string; // centavos
+  moneda: Moneda;
+  origenBucket: Bucket | null;
+  origenBancoId: string | null;
+  origenCuentaId: string | null;
+  destinoBucket: Bucket | null;
+  destinoBancoId: string | null;
+  destinoCuentaId: string | null;
+  sociedadId: string | null;
+  propiedadId: string | null;
+  alquilerId: string | null;
+  cuentaContraparteId: string | null;
+  comprobante: string | null;
+  facturado: boolean;
+  notes: string | null;
+};
+
+type Props = {
+  onSaved: (numero: number) => void;
+  onCancel: () => void;
+  // Si se pasa, el form arranca en modo edit con esos valores precargados.
+  initialValues?: EditInitialValues;
+};
+
+export function NewMovimientoForm({ onSaved, onCancel, initialValues }: Props) {
+  const isEdit = !!initialValues;
+  const [tipo, setTipo] = useState<string | null>(initialValues?.tipo ?? null);
+  const [fecha, setFecha] = useState(
+    initialValues ? initialValues.fecha.slice(0, 10) : new Date().toISOString().slice(0, 10),
+  );
+  const [monto, setMonto] = useState(initialValues ? (Number(initialValues.monto) / 100).toFixed(2) : '');
+  const [moneda, setMoneda] = useState<Moneda>(initialValues?.moneda ?? 'ARS');
+  const [origenBucket, setOrigenBucket] = useState<Bucket | ''>(initialValues?.origenBucket ?? '');
+  const [origenBancoId, setOrigenBancoId] = useState(initialValues?.origenBancoId ?? '');
+  const [origenCuentaId, setOrigenCuentaId] = useState(initialValues?.origenCuentaId ?? '');
+  const [destinoBucket, setDestinoBucket] = useState<Bucket | ''>(initialValues?.destinoBucket ?? '');
+  const [destinoBancoId, setDestinoBancoId] = useState(initialValues?.destinoBancoId ?? '');
+  const [destinoCuentaId, setDestinoCuentaId] = useState(initialValues?.destinoCuentaId ?? '');
+  const [sociedadId, setSociedadId] = useState(initialValues?.sociedadId ?? '');
+  const [propiedadId, setPropiedadId] = useState(initialValues?.propiedadId ?? '');
+  const [alquilerId, setAlquilerId] = useState(initialValues?.alquilerId ?? '');
+  const [cuentaContraparteId, setCuentaContraparteId] = useState(initialValues?.cuentaContraparteId ?? '');
   const [reparto, setReparto] = useState<RepartoRow[]>([]);
-  const [comprobante, setComprobante] = useState('');
-  const [facturado, setFacturado] = useState(false);
-  const [notes, setNotes] = useState('');
+  const [comprobante, setComprobante] = useState(initialValues?.comprobante ?? '');
+  const [facturado, setFacturado] = useState(initialValues?.facturado ?? false);
+  const [notes, setNotes] = useState(initialValues?.notes ?? '');
   const [saving, setSaving] = useState(false);
 
   const { data: bancos } = useQuery<Banco[]>('/bancos', { active: 'true' });
@@ -240,9 +273,11 @@ export function NewMovimientoForm({ onSaved, onCancel }: { onSaved: (numero: num
       if (facturado) body.facturado = true;
       if (notes.trim()) body.notes = notes.trim();
 
-      const created = await apiFetch<{ numero: number }>('/movimientos', { method: 'POST', body });
-      toast.success(`Movimiento #${created.numero} registrado`);
-      onSaved(created.numero);
+      const saved = isEdit
+        ? await apiFetch<{ numero: number }>(`/movimientos/${initialValues!.id}`, { method: 'PUT', body })
+        : await apiFetch<{ numero: number }>('/movimientos', { method: 'POST', body });
+      toast.success(isEdit ? `Movimiento #${saved.numero} actualizado` : `Movimiento #${saved.numero} registrado`);
+      onSaved(saved.numero);
     } catch (e) {
       toast.error(formatApiError(e));
     } finally {

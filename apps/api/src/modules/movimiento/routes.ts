@@ -38,7 +38,7 @@ export default async function movimientoRoutes(fastify: FastifyInstance) {
   fastify.put('/:id', async (request) => {
     const { id } = idParam.parse(request.params);
     const body = updateMovimientoSchema.parse(request.body);
-    return service.updateMovimiento(id, body);
+    return service.updateMovimiento(id, body, request.user.userId);
   });
 
   fastify.post('/:id/reversar', async (request, reply) => {

@@ -272,10 +272,11 @@ async function buildRepartoChildren(
   }
 }
 
-export async function createMovimiento(input: CreateMovimientoInput, userId: string) {
-  // REPARTO_SOCIO no se crea por API directa — solo lo emite buildRepartoChildren.
+// Validación sincrónica del input: flow, sides, campos requeridos por tipo.
+// Re-usada por createMovimiento y updateMovimiento.
+function validateMovStructure(input: CreateMovimientoInput) {
   if (input.tipo === 'REPARTO_SOCIO') {
-    throw unprocessable('REPARTO_SOCIO no se crea directamente', 'REPARTO_SOCIO_NO_DIRECT');
+    throw unprocessable('REPARTO_SOCIO no se crea ni edita directamente', 'REPARTO_SOCIO_NO_DIRECT');
   }
   const rule = RULES[input.tipo];
 
@@ -290,7 +291,6 @@ export async function createMovimiento(input: CreateMovimientoInput, userId: str
     cuentaId: input.destinoCuentaId,
   };
 
-  // Flow validation
   switch (rule.flow) {
     case 'I':
       if (origen.bucket) throw unprocessable('Este tipo no admite origen', 'MOV_FLOW_INGRESO');
@@ -335,48 +335,58 @@ export async function createMovimiento(input: CreateMovimientoInput, userId: str
     throw unprocessable('origenBancoId es requerido', 'MOV_BANCO_REQUIRED');
   }
 
-  return prisma.$transaction(async (tx) => {
-    // Validate referenced bancos/cuentas exist & active.
-    const [origenBanco, destinoBanco, origenCuenta, destinoCuenta, alquilerCheck, propiedadCheck, sociedadCheck, contraparteCheck] = await Promise.all([
-      input.origenBancoId  ? tx.banco.findUnique({ where: { id: input.origenBancoId } })   : null,
-      input.destinoBancoId ? tx.banco.findUnique({ where: { id: input.destinoBancoId } })  : null,
-      input.origenCuentaId ? tx.cuenta.findUnique({ where: { id: input.origenCuentaId } }) : null,
-      input.destinoCuentaId? tx.cuenta.findUnique({ where: { id: input.destinoCuentaId } }): null,
-      input.alquilerId     ? tx.alquiler.findUnique({ where: { id: input.alquilerId }, include: { propiedad: true } }) : null,
-      input.propiedadId    ? tx.propiedad.findUnique({ where: { id: input.propiedadId } }) : null,
-      input.sociedadId     ? tx.sociedad.findUnique({ where: { id: input.sociedadId } })   : null,
-      input.cuentaContraparteId ? tx.cuenta.findUnique({ where: { id: input.cuentaContraparteId } }) : null,
-    ]);
+  return { origen, destino };
+}
 
-    if (input.origenBancoId  && (!origenBanco  || origenBanco.deletedAt  || !origenBanco.isActive))   throw unprocessable('Banco origen inválido o cerrado',   'MOV_BANCO_ORIGEN_INVALID');
-    if (input.destinoBancoId && (!destinoBanco || destinoBanco.deletedAt || !destinoBanco.isActive))  throw unprocessable('Banco destino inválido o cerrado',  'MOV_BANCO_DESTINO_INVALID');
-    if (input.origenCuentaId && (!origenCuenta || origenCuenta.deletedAt || !origenCuenta.isActive))  throw unprocessable('Cuenta origen inválida o inactiva',  'MOV_CUENTA_ORIGEN_INVALID');
-    if (input.destinoCuentaId && (!destinoCuenta || destinoCuenta.deletedAt || !destinoCuenta.isActive)) throw unprocessable('Cuenta destino inválida o inactiva', 'MOV_CUENTA_DESTINO_INVALID');
-    if (input.alquilerId  && (!alquilerCheck  || alquilerCheck.deletedAt))    throw unprocessable('Alquiler inválido',  'MOV_ALQUILER_INVALID');
-    if (input.propiedadId && (!propiedadCheck || propiedadCheck.deletedAt))   throw unprocessable('Propiedad inválida', 'MOV_PROPIEDAD_INVALID');
-    if (input.sociedadId  && (!sociedadCheck  || sociedadCheck.deletedAt))    throw unprocessable('Sociedad inválida',  'MOV_SOCIEDAD_INVALID');
-    if (input.cuentaContraparteId && (!contraparteCheck || contraparteCheck.deletedAt)) throw unprocessable('Cuenta contraparte inválida', 'MOV_CONTRAPARTE_INVALID');
+// Validar refs (existencia + estado activo) y derivar sociedadId. Re-usado
+// por create y update. Devuelve `sociedadId` resuelto.
+async function validateMovRefs(tx: Prisma.TransactionClient, input: CreateMovimientoInput): Promise<{ sociedadId: string | undefined }> {
+  const [origenBanco, destinoBanco, origenCuenta, destinoCuenta, alquilerCheck, propiedadCheck, sociedadCheck, contraparteCheck] = await Promise.all([
+    input.origenBancoId  ? tx.banco.findUnique({ where: { id: input.origenBancoId } })   : null,
+    input.destinoBancoId ? tx.banco.findUnique({ where: { id: input.destinoBancoId } })  : null,
+    input.origenCuentaId ? tx.cuenta.findUnique({ where: { id: input.origenCuentaId } }) : null,
+    input.destinoCuentaId? tx.cuenta.findUnique({ where: { id: input.destinoCuentaId } }): null,
+    input.alquilerId     ? tx.alquiler.findUnique({ where: { id: input.alquilerId }, include: { propiedad: true } }) : null,
+    input.propiedadId    ? tx.propiedad.findUnique({ where: { id: input.propiedadId } }) : null,
+    input.sociedadId     ? tx.sociedad.findUnique({ where: { id: input.sociedadId } })   : null,
+    input.cuentaContraparteId ? tx.cuenta.findUnique({ where: { id: input.cuentaContraparteId } }) : null,
+  ]);
 
-    // Reject post-finalización ALQUILER on FINALIZADO alquileres.
-    if (alquilerCheck && input.tipo === 'ALQUILER_COBRO') {
-      if (alquilerCheck.status === 'FINALIZADO' && alquilerCheck.finalizadoEn) {
-        const fechaInput = new Date(`${input.fecha}T00:00:00.000Z`);
-        if (fechaInput > alquilerCheck.finalizadoEn) {
-          throw conflict(
-            'No se puede registrar un cobro con fecha posterior a la finalización del alquiler',
-            'ALQUILER_FINALIZADO_FECHA_POSTERIOR',
-          );
-        }
+  if (input.origenBancoId  && (!origenBanco  || origenBanco.deletedAt  || !origenBanco.isActive))   throw unprocessable('Banco origen inválido o cerrado',   'MOV_BANCO_ORIGEN_INVALID');
+  if (input.destinoBancoId && (!destinoBanco || destinoBanco.deletedAt || !destinoBanco.isActive))  throw unprocessable('Banco destino inválido o cerrado',  'MOV_BANCO_DESTINO_INVALID');
+  if (input.origenCuentaId && (!origenCuenta || origenCuenta.deletedAt || !origenCuenta.isActive))  throw unprocessable('Cuenta origen inválida o inactiva',  'MOV_CUENTA_ORIGEN_INVALID');
+  if (input.destinoCuentaId && (!destinoCuenta || destinoCuenta.deletedAt || !destinoCuenta.isActive)) throw unprocessable('Cuenta destino inválida o inactiva', 'MOV_CUENTA_DESTINO_INVALID');
+  if (input.alquilerId  && (!alquilerCheck  || alquilerCheck.deletedAt))    throw unprocessable('Alquiler inválido',  'MOV_ALQUILER_INVALID');
+  if (input.propiedadId && (!propiedadCheck || propiedadCheck.deletedAt))   throw unprocessable('Propiedad inválida', 'MOV_PROPIEDAD_INVALID');
+  if (input.sociedadId  && (!sociedadCheck  || sociedadCheck.deletedAt))    throw unprocessable('Sociedad inválida',  'MOV_SOCIEDAD_INVALID');
+  if (input.cuentaContraparteId && (!contraparteCheck || contraparteCheck.deletedAt)) throw unprocessable('Cuenta contraparte inválida', 'MOV_CONTRAPARTE_INVALID');
+
+  if (alquilerCheck && input.tipo === 'ALQUILER_COBRO') {
+    if (alquilerCheck.status === 'FINALIZADO' && alquilerCheck.finalizadoEn) {
+      const fechaInput = new Date(`${input.fecha}T00:00:00.000Z`);
+      if (fechaInput > alquilerCheck.finalizadoEn) {
+        throw conflict(
+          'No se puede registrar un cobro con fecha posterior a la finalización del alquiler',
+          'ALQUILER_FINALIZADO_FECHA_POSTERIOR',
+        );
       }
     }
+  }
 
-    // Derive sociedadId from banco/propiedad if not provided.
-    let sociedadId = input.sociedadId;
-    if (!sociedadId && input.propiedadId && propiedadCheck) sociedadId = propiedadCheck.sociedadId;
-    if (!sociedadId && alquilerCheck) sociedadId = alquilerCheck.propiedad.sociedadId;
-    if (!sociedadId && origenBanco) sociedadId = origenBanco.sociedadId;
-    if (!sociedadId && destinoBanco) sociedadId = destinoBanco.sociedadId;
+  let sociedadId = input.sociedadId;
+  if (!sociedadId && input.propiedadId && propiedadCheck) sociedadId = propiedadCheck.sociedadId;
+  if (!sociedadId && alquilerCheck) sociedadId = alquilerCheck.propiedad.sociedadId;
+  if (!sociedadId && origenBanco) sociedadId = origenBanco.sociedadId;
+  if (!sociedadId && destinoBanco) sociedadId = destinoBanco.sociedadId;
 
+  return { sociedadId };
+}
+
+export async function createMovimiento(input: CreateMovimientoInput, userId: string) {
+  const { origen, destino } = validateMovStructure(input);
+
+  return prisma.$transaction(async (tx) => {
+    const { sociedadId } = await validateMovRefs(tx, input);
     const cajaDia = await getOrCreateCajaForFecha(tx, input.fecha);
 
     const created = await tx.movimiento.create({
@@ -661,12 +671,166 @@ export async function getMovimientoByNumero(numero: number) {
   return mov;
 }
 
-export async function updateMovimiento(id: string, input: UpdateMovimientoInput) {
+// Campos cuyo cambio dispara recálculo de saldos + reparto.
+const STRUCTURAL_KEYS = [
+  'fecha', 'tipo', 'monto', 'moneda',
+  'origenBucket', 'origenBancoId', 'origenCuentaId',
+  'destinoBucket', 'destinoBancoId', 'destinoCuentaId',
+  'sociedadId', 'propiedadId', 'alquilerId',
+  'repartoSocios',
+] as const;
+
+function hasStructuralChange(input: UpdateMovimientoInput): boolean {
+  return STRUCTURAL_KEYS.some((k) => input[k] !== undefined);
+}
+
+// Mezcla el input parcial sobre el mov actual para obtener el estado deseado
+// del movimiento como si se estuviera creando from-scratch. Devuelve un objeto
+// con la misma shape que CreateMovimientoInput.
+function buildMergedInput(mov: Prisma.MovimientoGetPayload<{}>, input: UpdateMovimientoInput): CreateMovimientoInput {
+  function mergeStr<K extends keyof UpdateMovimientoInput, V>(key: K, current: V): V | undefined {
+    const v = input[key];
+    if (v === undefined) return current ?? undefined;
+    return (v as unknown as V) ?? undefined;
+  }
+  const fecha = input.fecha ?? mov.fecha.toISOString().slice(0, 10);
+  return {
+    fecha,
+    tipo: input.tipo ?? mov.tipo,
+    monto: input.monto ?? mov.monto,
+    moneda: input.moneda ?? mov.moneda,
+    origenBucket:   mergeStr('origenBucket',   mov.origenBucket   ?? undefined),
+    origenBancoId:  mergeStr('origenBancoId',  mov.origenBancoId  ?? undefined),
+    origenCuentaId: mergeStr('origenCuentaId', mov.origenCuentaId ?? undefined),
+    destinoBucket:   mergeStr('destinoBucket',   mov.destinoBucket   ?? undefined),
+    destinoBancoId:  mergeStr('destinoBancoId',  mov.destinoBancoId  ?? undefined),
+    destinoCuentaId: mergeStr('destinoCuentaId', mov.destinoCuentaId ?? undefined),
+    sociedadId:        mergeStr('sociedadId',        mov.sociedadId        ?? undefined),
+    propiedadId:       mergeStr('propiedadId',       mov.propiedadId       ?? undefined),
+    alquilerId:        mergeStr('alquilerId',        mov.alquilerId        ?? undefined),
+    cuentaContraparteId: mergeStr('cuentaContraparteId', mov.cuentaContraparteId ?? undefined),
+    comprobante: input.comprobante !== undefined ? (input.comprobante ?? null) : (mov.comprobante ?? null),
+    facturado:   input.facturado   !== undefined ? input.facturado   : mov.facturado,
+    notes:       input.notes       !== undefined ? (input.notes ?? null) : (mov.notes ?? null),
+    repartoSocios: input.repartoSocios,
+  } as CreateMovimientoInput;
+}
+
+export async function updateMovimiento(id: string, input: UpdateMovimientoInput, userId: string) {
   const mov = await prisma.movimiento.findUnique({ where: { id } });
   if (!mov) throw notFound('Movimiento no encontrado');
-  const data: Prisma.MovimientoUpdateInput = {};
-  if (input.notes !== undefined)       data.notes       = input.notes ?? null;
-  if (input.comprobante !== undefined) data.comprobante = input.comprobante ?? null;
-  if (input.facturado !== undefined)   data.facturado   = input.facturado;
-  return prisma.movimiento.update({ where: { id }, data });
+
+  // Bloqueos: no editamos derivados / reversos / movs ya reversados.
+  if (mov.derivadoDeId) throw conflict('No se edita un reparto; editá el mov padre', 'MOV_IS_DERIVADO');
+  if (mov.tipo === 'REPARTO_SOCIO') throw conflict('No se edita REPARTO_SOCIO directamente', 'MOV_IS_REPARTO');
+  if (mov.reversoDeId) throw conflict('No se edita un reverso', 'MOV_IS_REVERSO');
+  const existingReverso = await prisma.movimiento.findFirst({ where: { reversoDeId: id }, select: { id: true } });
+  if (existingReverso) throw conflict('El movimiento ya fue reversado; no se puede editar', 'MOV_ALREADY_REVERSED');
+
+  if (!hasStructuralChange(input)) {
+    // Camino rápido: solo notes / comprobante / facturado / cuentaContraparteId
+    // (que es informational, no toca saldos).
+    const data: Prisma.MovimientoUpdateInput = {};
+    if (input.notes !== undefined)       data.notes       = input.notes ?? null;
+    if (input.comprobante !== undefined) data.comprobante = input.comprobante ?? null;
+    if (input.facturado !== undefined)   data.facturado   = input.facturado;
+    if (input.cuentaContraparteId !== undefined) {
+      data.cuentaContraparte = input.cuentaContraparteId
+        ? { connect: { id: input.cuentaContraparteId } }
+        : { disconnect: true };
+    }
+    return prisma.movimiento.update({ where: { id }, data });
+  }
+
+  // Camino destructivo: revertir delta + children del original, validar el nuevo
+  // estado y aplicar los nuevos delta + reparto. Todo dentro de una sola tx
+  // Serializable, igual que createMovimiento/reversarMovimiento.
+  const merged = buildMergedInput(mov, input);
+  validateMovStructure(merged);
+
+  return prisma.$transaction(async (tx) => {
+    // 1. Revertir reparto: por cada child REPARTO_SOCIO, revertir su delta y borrarlo.
+    const oldChildren = await tx.movimiento.findMany({ where: { derivadoDeId: id } });
+    for (const child of oldChildren) {
+      const wasDestino = child.destinoBucket === 'CUENTA_CORRIENTE';
+      const cuentaId = wasDestino ? child.destinoCuentaId : child.origenCuentaId;
+      if (cuentaId) {
+        const field = child.moneda === 'ARS' ? 'saldoArs' : 'saldoUsd';
+        const sign = wasDestino ? -1n : 1n; // opuesto al delta original
+        await tx.cuenta.update({
+          where: { id: cuentaId },
+          data: { [field]: { increment: sign * child.monto } },
+        });
+      }
+    }
+    if (oldChildren.length > 0) {
+      await tx.movimiento.deleteMany({ where: { derivadoDeId: id } });
+    }
+
+    // 2. Revertir delta del mov original.
+    const oldOrigen:  Side = { bucket: mov.origenBucket  ?? undefined, bancoId: mov.origenBancoId  ?? undefined, cuentaId: mov.origenCuentaId  ?? undefined };
+    const oldDestino: Side = { bucket: mov.destinoBucket ?? undefined, bancoId: mov.destinoBancoId ?? undefined, cuentaId: mov.destinoCuentaId ?? undefined };
+    if (oldOrigen.bucket)  await applyDelta(tx, oldOrigen,  mov.moneda, mov.monto);   // signo opuesto al create
+    if (oldDestino.bucket) await applyDelta(tx, oldDestino, mov.moneda, -mov.monto);
+
+    // 3. Validar refs del nuevo input y derivar sociedadId.
+    const { sociedadId } = await validateMovRefs(tx, merged);
+
+    // 4. Resolver caja para la (posiblemente nueva) fecha.
+    const cajaDia = await getOrCreateCajaForFecha(tx, merged.fecha);
+
+    // 5. Aplicar update con los nuevos campos.
+    const updated = await tx.movimiento.update({
+      where: { id },
+      data: {
+        fecha: new Date(`${merged.fecha}T00:00:00.000Z`),
+        cajaDiaId: cajaDia.id,
+        tipo: merged.tipo,
+        monto: merged.monto,
+        moneda: merged.moneda,
+        origenBucket: merged.origenBucket ?? null,
+        origenBancoId: merged.origenBancoId ?? null,
+        origenCuentaId: merged.origenCuentaId ?? null,
+        destinoBucket: merged.destinoBucket ?? null,
+        destinoBancoId: merged.destinoBancoId ?? null,
+        destinoCuentaId: merged.destinoCuentaId ?? null,
+        sociedadId: sociedadId ?? null,
+        propiedadId: merged.propiedadId ?? null,
+        alquilerId: merged.alquilerId ?? null,
+        cuentaContraparteId: merged.cuentaContraparteId ?? null,
+        comprobante: merged.comprobante ?? null,
+        facturado: merged.facturado ?? false,
+        notes: merged.notes ?? null,
+      },
+    });
+
+    // 6. Aplicar nuevos deltas.
+    const newOrigen:  Side = { bucket: merged.origenBucket,  bancoId: merged.origenBancoId,  cuentaId: merged.origenCuentaId };
+    const newDestino: Side = { bucket: merged.destinoBucket, bancoId: merged.destinoBancoId, cuentaId: merged.destinoCuentaId };
+    if (newOrigen.bucket)  await applyDelta(tx, newOrigen,  updated.moneda, -updated.monto);
+    if (newDestino.bucket) await applyDelta(tx, newDestino, updated.moneda,  updated.monto);
+
+    // 7. Reconstruir reparto.
+    await buildRepartoChildren(
+      tx,
+      {
+        id: updated.id,
+        tipo: updated.tipo,
+        monto: updated.monto,
+        moneda: updated.moneda,
+        fecha: updated.fecha,
+        cajaDiaId: updated.cajaDiaId,
+        alquilerId: updated.alquilerId,
+        propiedadId: updated.propiedadId,
+        origenBucket: updated.origenBucket,
+        origenBancoId: updated.origenBancoId,
+        destinoBucket: updated.destinoBucket,
+        destinoBancoId: updated.destinoBancoId,
+      },
+      merged.repartoSocios,
+      userId,
+    );
+
+    return updated;
+  }, { isolationLevel: 'Serializable' });
 }
