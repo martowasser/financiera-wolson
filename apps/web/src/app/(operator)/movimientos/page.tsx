@@ -15,7 +15,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowRight, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { label, movimientoTipoLabels } from '@/lib/labels';
 import { NewMovimientoForm } from './new-movimiento-form';
@@ -83,7 +84,7 @@ export default function MovimientosPage() {
       </Dialog>
 
       <Sheet open={!!selectedId} onOpenChange={(v) => { if (!v) closeDetail(); }}>
-        <SheetContent className="w-full max-w-lg sm:max-w-xl">
+        <SheetContent className="w-full sm:max-w-2xl">
           <SheetHeader>
             <SheetTitle>{selected ? `Movimiento #${selected.numero}` : 'Cargando…'}</SheetTitle>
           </SheetHeader>
@@ -106,6 +107,10 @@ function DetailView({ mov, onChange }: {
   const [savingEdit, setSavingEdit] = useState(false);
   const [reversarOpen, setReversarOpen] = useState(false);
 
+  const dirty = (notes.trim() || '') !== (mov.notes ?? '')
+    || (comprobante.trim() || '') !== (mov.comprobante ?? '')
+    || facturado !== mov.facturado;
+
   async function saveEdit() {
     setSavingEdit(true);
     try {
@@ -126,55 +131,75 @@ function DetailView({ mov, onChange }: {
     }
   }
 
+  const ctxItems: Array<{ label: string; value: React.ReactNode }> = [];
+  if (mov.sociedad) ctxItems.push({ label: 'Sociedad', value: <Link href={`/sociedades/${mov.sociedad.id}`} className="hover:underline">{mov.sociedad.name}</Link> });
+  if (mov.propiedad) ctxItems.push({ label: 'Propiedad', value: <Link href={`/propiedades/${mov.propiedad.id}`} className="hover:underline">{mov.propiedad.nombre}</Link> });
+  if (mov.alquiler) ctxItems.push({ label: 'Alquiler', value: <Link href={`/alquileres/${mov.alquiler.id}`} className="hover:underline">#{mov.alquiler.numero}</Link> });
+  if (mov.cuentaContraparte) ctxItems.push({ label: 'Contraparte', value: <Link href={`/cuentas/${mov.cuentaContraparte.id}`} className="hover:underline">{mov.cuentaContraparte.name}</Link> });
+
   return (
-    <div className="space-y-4 mt-4 text-sm">
-      <div className="grid grid-cols-2 gap-2">
-        <div><span className="text-muted-foreground">Tipo:</span> {label(movimientoTipoLabels, mov.tipo)}</div>
-        <div><span className="text-muted-foreground">Fecha:</span> {formatDate(mov.fecha)}</div>
-        <div><span className="text-muted-foreground">Monto:</span> <strong>{formatMoney(mov.monto, mov.moneda)}</strong></div>
-        <div><span className="text-muted-foreground">Moneda:</span> {mov.moneda}</div>
+    <div className="space-y-5 mt-4 px-1">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-3xl font-semibold leading-none">{formatMoney(mov.monto, mov.moneda)}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{mov.moneda}</div>
+        </div>
+        <div className="text-right text-sm">
+          <div className="font-medium">{formatDate(mov.fecha)}</div>
+        </div>
       </div>
 
-      <div className="rounded-md border p-3 space-y-1">
-        <div className="text-xs uppercase text-muted-foreground">Flujo</div>
-        <div>{legibleSide(mov, 'origen')} → {legibleSide(mov, 'destino')}</div>
+      <div className="space-y-2">
+        <Badge variant="outline" className="text-sm">{label(movimientoTipoLabels, mov.tipo)}</Badge>
+        <div className="flex items-center gap-2 text-sm">
+          <span>{legibleSide(mov, 'origen')}</span>
+          <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span>{legibleSide(mov, 'destino')}</span>
+        </div>
       </div>
 
-      {(mov.sociedad || mov.propiedad || mov.alquiler || mov.cuentaContraparte) && (
-        <div className="rounded-md border p-3 space-y-1 text-xs">
-          {mov.sociedad && <div><span className="text-muted-foreground">Sociedad:</span> <Link href={`/sociedades/${mov.sociedad.id}`} className="hover:underline">{mov.sociedad.name}</Link></div>}
-          {mov.propiedad && <div><span className="text-muted-foreground">Propiedad:</span> <Link href={`/propiedades/${mov.propiedad.id}`} className="hover:underline">{mov.propiedad.nombre}</Link></div>}
-          {mov.alquiler && <div><span className="text-muted-foreground">Alquiler:</span> <Link href={`/alquileres/${mov.alquiler.id}`} className="hover:underline">#{mov.alquiler.numero}</Link></div>}
-          {mov.cuentaContraparte && <div><span className="text-muted-foreground">Contraparte:</span> <Link href={`/cuentas/${mov.cuentaContraparte.id}`} className="hover:underline">{mov.cuentaContraparte.name}</Link></div>}
+      {ctxItems.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {ctxItems.map((it) => (
+            <div key={it.label} className="rounded-md border p-2.5">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{it.label}</div>
+              <div className="text-sm mt-0.5">{it.value}</div>
+            </div>
+          ))}
         </div>
       )}
 
-      <div className="space-y-2">
-        <div>
-          <Label>Comprobante</Label>
-          <Input value={comprobante} onChange={(e) => setComprobante(e.target.value)} />
+      <details className="rounded-md border" open={dirty}>
+        <summary className="cursor-pointer select-none px-3 py-2 text-sm text-muted-foreground hover:text-foreground">
+          Edición rápida
+        </summary>
+        <div className="space-y-3 px-3 pb-3">
+          <div>
+            <Label>Comprobante</Label>
+            <Input value={comprobante} onChange={(e) => setComprobante(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox id="facturado-detail" checked={facturado} onCheckedChange={(v) => setFacturado(v === true)} />
+            <Label htmlFor="facturado-detail">Facturado</Label>
+          </div>
+          <div>
+            <Label>Notas</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+          </div>
+          <Button size="sm" onClick={saveEdit} disabled={savingEdit || !dirty}>Guardar cambios</Button>
         </div>
-        <div className="flex items-center gap-2">
-          <Checkbox id="facturado-detail" checked={facturado} onCheckedChange={(v) => setFacturado(v === true)} />
-          <Label htmlFor="facturado-detail">Facturado</Label>
+      </details>
+
+      {!mov.reversoDeId && (
+        <div className="pt-1">
+          <Button variant="outline" size="sm" onClick={() => setReversarOpen(true)}>Reversar movimiento</Button>
         </div>
-        <div>
-          <Label>Notas</Label>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
-        </div>
-        <Button size="sm" onClick={saveEdit} disabled={savingEdit}>Guardar cambios</Button>
-      </div>
+      )}
 
       <div className="border-t pt-3 text-xs text-muted-foreground">
         Creado {formatDateTime(mov.createdAt)} por {mov.createdBy.name}.
         {mov.reversoDeId && <span> · Este movimiento es un reverso.</span>}
       </div>
-
-      {!mov.reversoDeId && (
-        <div>
-          <Button variant="outline" size="sm" onClick={() => setReversarOpen(true)}>Reversar movimiento</Button>
-        </div>
-      )}
 
       <ReversarDialog
         movId={mov.id}

@@ -208,9 +208,7 @@ export function MovimientosPanel({
                 <td className="px-2 py-2 font-mono text-xs">#{m.numero}</td>
                 <td className="px-2 py-2">{formatDate(m.fecha)}</td>
                 <td className="px-2 py-2">
-                  {m.derivadoDe
-                    ? <span className="text-xs text-muted-foreground">Reparto de #{m.derivadoDe.numero} · {label(movimientoTipoLabels, m.derivadoDe.tipo)}</span>
-                    : <Badge variant="outline">{label(movimientoTipoLabels, m.tipo)}</Badge>}
+                  <Badge variant="outline">{label(movimientoTipoLabels, m.tipo)}</Badge>
                 </td>
                 <td className="px-2 py-2 text-right font-medium">{formatMoney(m.monto, m.moneda)}</td>
                 <td className="px-2 py-2 text-muted-foreground text-xs">{legibleSide(m, 'origen')} → {legibleSide(m, 'destino')}</td>
@@ -255,19 +253,12 @@ function csvCell(v: string | number | null | undefined): string {
   return s;
 }
 
-function tipoLabelForCsv(m: PanelMov): string {
-  if (m.derivadoDe) {
-    return `Reparto de #${m.derivadoDe.numero} · ${label(movimientoTipoLabels, m.derivadoDe.tipo)}`;
-  }
-  return label(movimientoTipoLabels, m.tipo);
-}
-
 export function movsToCsv(movs: PanelMov[]): string {
   const headers = ['Numero', 'Fecha', 'Tipo', 'Monto', 'Moneda', 'Origen', 'Destino', 'Sociedad', 'Propiedad', 'Alquiler', 'Contraparte', 'Comprobante', 'Facturado', 'Notas'];
   const rows = movs.map((m) => [
     `#${m.numero}`,
     m.fecha.slice(0, 10),
-    tipoLabelForCsv(m),
+    label(movimientoTipoLabels, m.tipo),
     (Number(m.monto) / 100).toFixed(2),
     m.moneda,
     legibleSide(m, 'origen'),
