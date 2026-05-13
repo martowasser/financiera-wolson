@@ -7,11 +7,11 @@ import { apiFetch } from '@/lib/api';
 import { formatApiError } from '@/lib/api-errors';
 import { formatMoney, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { label, movimientoTipoLabels, bucketLabels } from '@/lib/labels';
+import { FiltersBar, type FilterKey, type FiltersState } from './movimientos-panel/filters-bar';
 
 // Tipo común para los movimientos que devuelve /movimientos.
 // Mantener en sync con el include del backend (apps/api/src/modules/movimiento/service.ts:listMovimientos).
@@ -47,8 +47,6 @@ export type Scope = {
   fecha?: string;
 };
 
-type FilterKey = 'from' | 'to' | 'tipo' | 'q' | 'moneda';
-
 type Props = {
   scope?: Scope;
   defaultLimit?: number;
@@ -69,15 +67,17 @@ export function MovimientosPanel({
   const searchParams = useSearchParams();
   const [downloading, setDownloading] = useState(false);
 
-  const filters = useMemo(() => ({
-    from: searchParams.get('from') || undefined,
-    to: searchParams.get('to') || undefined,
-    tipo: searchParams.get('tipo') || undefined,
-    q: searchParams.get('q') || undefined,
-    moneda: searchParams.get('moneda') || undefined,
+  const filters: FiltersState = useMemo(() => ({
+    from:        searchParams.get('from')        || undefined,
+    to:          searchParams.get('to')          || undefined,
+    tipo:        searchParams.get('tipo')        || undefined,
+    q:           searchParams.get('q')           || undefined,
+    moneda:      searchParams.get('moneda')      || undefined,
+    sociedadId:  searchParams.get('sociedadId')  || undefined,
+    cuentaId:    searchParams.get('cuentaId')    || undefined,
+    propiedadId: searchParams.get('propiedadId') || undefined,
+    alquilerId:  searchParams.get('alquilerId')  || undefined,
   }), [searchParams]);
-
-  const hasAnyFilter = !!(filters.from || filters.to || filters.tipo || filters.q || filters.moneda);
 
   const queryParams = { ...filters, ...scope, limit: defaultLimit };
   const { data: movs, isLoading } = useQuery<PanelMov[]>('/movimientos', queryParams);
@@ -92,10 +92,27 @@ export function MovimientosPanel({
 
   function clearFilters() {
     const sp = new URLSearchParams(searchParams.toString());
-    (['from', 'to', 'tipo', 'q', 'moneda'] as FilterKey[]).forEach((k) => sp.delete(k));
+    (Object.keys(filters) as FilterKey[]).forEach((k) => sp.delete(k));
     const qs = sp.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
+
+  // Las claves de filtro disponibles son las que NO están fijadas por scope ni
+  // ocultas explícitamente. Si scope.cuentaId está seteado, filtrar por
+  // cuentaId desde la UI no tiene sentido.
+  const allFilterKeys: FilterKey[] = ['from', 'to', 'q', 'tipo', 'moneda', 'sociedadId', 'cuentaId', 'propiedadId', 'alquilerId'];
+  const availableFilters: FilterKey[] = useMemo(() => {
+    return allFilterKeys.filter((k) => {
+      if (hideFilters.includes(k)) return false;
+      if (scope?.sociedadId && k === 'sociedadId') return false;
+      if (scope?.cuentaId && k === 'cuentaId') return false;
+      if (scope?.propiedadId && k === 'propiedadId') return false;
+      if (scope?.alquilerId && k === 'alquilerId') return false;
+      if (scope?.bancoId && k === 'sociedadId') return false; // banco implica sociedad
+      return true;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hideFilters.join(','), scope?.sociedadId, scope?.cuentaId, scope?.propiedadId, scope?.alquilerId, scope?.bancoId]);
 
   async function downloadCsv() {
     setDownloading(true);
@@ -119,7 +136,7 @@ export function MovimientosPanel({
     }
   }
 
-  const show = (k: FilterKey) => !hideFilters.includes(k);
+  const count = movs?.length ?? 0;
 
   return (
     <div className="space-y-3">
@@ -128,60 +145,21 @@ export function MovimientosPanel({
           <Download className="h-4 w-4" /> {downloading ? 'Descargando…' : 'Descargar CSV'}
         </Button>
         <div className="h-6 w-px bg-border mx-1" />
-        {show('q') && (
-          <Input
-            placeholder="Buscar en notas o comprobante…"
-            value={filters.q ?? ''}
-            onChange={(e) => setFilter('q', e.target.value)}
-            className="max-w-xs"
-          />
-        )}
-        {show('tipo') && (
-          <select
-            value={filters.tipo ?? ''}
-            onChange={(e) => setFilter('tipo', e.target.value || undefined)}
-            className="h-9 rounded-md border bg-background px-3 text-sm"
-          >
-            <option value="">Todos los tipos</option>
-            {Object.keys(movimientoTipoLabels).filter((t) => t !== 'REPARTO_SOCIO').map((t) => (
-              <option key={t} value={t}>{movimientoTipoLabels[t]}</option>
-            ))}
-          </select>
-        )}
-        {show('moneda') && (
-          <select
-            value={filters.moneda ?? ''}
-            onChange={(e) => setFilter('moneda', e.target.value || undefined)}
-            className="h-9 rounded-md border bg-background px-3 text-sm"
-          >
-            <option value="">ARS + USD</option>
-            <option value="ARS">Pesos</option>
-            <option value="USD">Dólares</option>
-          </select>
-        )}
-        {show('from') && (
-          <Input
-            type="date"
-            value={filters.from ?? ''}
-            onChange={(e) => setFilter('from', e.target.value || undefined)}
-            className="w-40"
-          />
-        )}
-        {show('to') && (
-          <>
-            <span className="text-xs text-muted-foreground">a</span>
-            <Input
-              type="date"
-              value={filters.to ?? ''}
-              onChange={(e) => setFilter('to', e.target.value || undefined)}
-              className="w-40"
-            />
-          </>
-        )}
-        {hasAnyFilter && (
-          <Button size="sm" variant="ghost" onClick={clearFilters}>Limpiar</Button>
-        )}
+        <FiltersBar
+          filters={filters}
+          onChange={setFilter}
+          onClear={clearFilters}
+          availableFilters={availableFilters}
+        />
       </div>
+
+      {!isLoading && (
+        <div className="text-xs text-muted-foreground">
+          {count === defaultLimit
+            ? `Mostrando primeros ${defaultLimit} — refiná filtros para ver más`
+            : `${count} ${count === 1 ? 'movimiento' : 'movimientos'}`}
+        </div>
+      )}
 
       <div className="rounded-md border">
         <table className="w-full text-sm">
